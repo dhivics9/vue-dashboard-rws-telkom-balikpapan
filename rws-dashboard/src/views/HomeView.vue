@@ -1,43 +1,172 @@
 <script setup>
+// Import necessary Vue features and components
 import { ref, computed } from 'vue'; // 1. Import 'computed'
 import { customers } from '../data/mock-data.js';
 import * as XLSX from 'xlsx';
 import RevenueBarChart from '../components/RevenueBarChart.vue';
 import StatusPieChart from '../components/StatusPieChart.vue';
 
+
+//Data handling variables
 const customerData = ref([]);
-const activeFilter = ref('All');
+const fileInput = ref(null);
+
+//Filter variables
+const selectedRegional = ref('All Regionals');
+const selectedMonth = ref('All Months');
+const statusFilter = ref('All');
+
+//Website State variables
+const isLoading = ref(false);
 const isDragging = ref(false);
+const itemsPerPage = ref(5);
+const currentPage = ref(1);
 
+//Filtering Logic
+const regionalList = computed(() => {
+  if (!customerData.value.length) return ['All Regionals'];
 
-// const setFilter = (status) => {
-//   activeFilter.value = status;
-// };
+  const allRegionals = customerData.value
+    .filter(c => c.regional) //
+    .map(c => c.regional); //
 
-const filteredData = computed(() => {
-  if (activeFilter.value === 'All') {
-    return customerData.value;
-  }
-  return customerData.value.filter(
-    (customer) => customer.status === activeFilter.value
-  );
+  const uniqueRegionals = [...new Set(allRegionals)];
+  return ['All Regionals', ...uniqueRegionals.sort()];
 });
 
+const monthList = computed(() => {
+  if (!customerData.value.length) return ['All Months'];
+  const allMonths = customerData.value.map(c => c.periode.toString()).filter(Boolean);
+  const uniqueMonths = [...new Set(allMonths)];
+  return ['All Months', ...uniqueMonths.sort().reverse()];
+});
 
-// 1. Initialize customerData with mock data
+const filteredData = computed(() => {
+  let dataToFilter = [...customerData.value];
+
+  // 1. Filter based on Regional
+  if (selectedRegional.value !== 'All Regionals') {
+    dataToFilter = dataToFilter.filter(c => c.Regional === selectedRegional.value);
+  }
+
+  // 2. Filter based on Status (Rev_Type)
+  if (statusFilter.value !== 'All') {
+    dataToFilter = dataToFilter.filter(c => c.Rev_Type === statusFilter.value);
+  }
+
+  // 3. Filter based on Bulan (Periode)
+  if (selectedMonth.value !== 'All Months') {
+    dataToFilter = dataToFilter.filter(c => c.periode.toString() === selectedMonth.value);
+  }
+
+  currentPage.value = 1; // Reset to page 1
+  return dataToFilter;
+});
+
+const refreshData = () => {
+  customerData.value = [];
+  
+  if (fileInput.value) {
+    fileInput.value.value = null;
+  }
+};
+
+const paginatedData = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value;
+  const end = start + itemsPerPage.value;
+  return filteredData.value.slice(start, end);
+});
+
+const totalPages = computed(() => {
+  return Math.ceil(filteredData.value.length / itemsPerPage.value);
+});
+
+const nextPage = () => {
+  const totalPages = Math.ceil(filteredData.value.length / itemsPerPage.value);
+  if (currentPage.value < totalPages) {
+    currentPage.value++;
+  }
+};
+
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+  }
+};
+
+// 1. Initialize customerData with json/excel
 const processFile = (file) => {
   if (!file) return;
 
+  const fileName = file.name;
+  const fileExtension = fileName.split('.').pop().toLowerCase();
+
+  isLoading.value = true;
+
   const reader = new FileReader();
-  reader.onload = (e) => {
-    const data = new Uint8Array(e.target.result);
-    const workbook = XLSX.read(data, { type: 'array' });
-    const firstSheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[firstSheetName];
-    const jsonData = XLSX.utils.sheet_to_json(worksheet);
-    customerData.value = jsonData;
+
+  if (fileExtension === 'json'){
+    reader.onload = (e) => {
+    try {
+      const text = e.target.result;
+      // console.log("Raw file content:", text.substring(0, 200)); // Log first 200 chars
+      // console.log("File starts with:", text.charCodeAt(0)); // Check for BOM
+
+
+      const jsonData = JSON.parse(text);
+      customerData.value = jsonData; // Limit records for performance
+      // Optionally log the data for debugging
+      console.log(`Data successfully read : ${customerData.value.length} records`);
+      console.log("Excel data loaded successfully:", customerData.value.slice(0, 10));
+    } catch (error) {
+      console.error("Error parsing JSON file:", error);
+      console.error("Error details:", error.message);
+      alert("The file is not a valid JSON file.");
+    } finally {
+      isLoading.value = false;
+    }
   };
-  reader.readAsArrayBuffer(file);
+
+  reader.onerror = () => {
+    console.error("Could not read the file.");
+    alert("There was an error reading the file.");
+    isLoading.value = false;
+  };
+
+  // Read the file as text instead of an ArrayBuffer
+  reader.readAsText(file);
+  } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        customerData.value = jsonData; // Limit records for performance
+        // Optionally log the data for debugging
+        console.log(`Data successfully read : ${customerData.value.length} records`);
+        console.log("Excel data loaded successfully:", customerData.value.slice(0, 10));
+      } catch (error) {
+        console.error("Error parsing Excel file:", error);
+        alert("The file is not a valid Excel file.");
+      } finally {
+        isLoading.value = false;
+      }
+    };
+
+    reader.onerror = () => {
+      console.error("Could not read the file.");
+      alert("There was an error reading the file.");
+      isLoading.value = false;
+    };
+
+    // Read the file as an ArrayBuffer
+    reader.readAsArrayBuffer(file);
+  } else {
+    alert("Please upload a valid JSON or Excel file.");
+    isLoading.value = false;
+  }
 };
 
 // Normal file input click
@@ -59,29 +188,9 @@ const handleDrop = (event) => {
 
 // 2. Add computed properties to calculate summaries
 const totalRevenue = computed(() => {
-  // Use .reduce() to sum up the currentRevenue of all customers
-  return filteredData.value.reduce((total, customer) => total + customer.currentRevenue, 0);
-});
-
-const totalPreviousRevenue = computed(() => {
-  return filteredData.value.reduce((total, customer) => total + customer.previousRevenue, 0);
-});
-
-const netRevenueChange = computed(() => {
-  if (!filteredData.value.length) return 0;
-
   return filteredData.value.reduce((total, customer) => {
-    if (customer.status === 'New') {
-      return total + customer.currentRevenue;
-    }
-    if (customer.status === 'Cancel') {
-      return total - customer.previousRevenue;
-    }
-    if (customer.status === 'Modify') {
-      const difference = customer.currentRevenue - customer.previousRevenue;
-      return total + difference;
-    }
-    return total;
+    const revenueValue = parseFloat(customer.Revenue || 0);
+    return total + revenueValue;
   }, 0);
 });
 
@@ -105,7 +214,7 @@ const revenueChartData = computed(() => {
       {
         label: 'Current Revenue',
         backgroundColor: '#41B883', // A nice Vue green color
-        data: customerData.value.map(customer => customer.currentRevenue)
+        data: filteredData.value.map(customer => customer.currentRevenue)
       }
     ]
   };
@@ -130,50 +239,58 @@ const pieChartData = computed(() => {
 
 <template>
   <main>
+    
     <h1>Wholesale Dashboard</h1>
 
-    <div class="upload-zone" :class="{ 'is-dragging': isDragging }" @dragover.prevent="handleDragOver" @dragleave.prevent="handleDragLeave" @drop.prevent="handleDrop">
-      <input type="file" id="file-upload" @change="handleFileSelect"/>
-      <p>Drag & Drop your Excel file here, or <span>click to select</span>.</p>
+    <div class="upload-section">
+      <div class="refresh-upload">
+        <button @click="refreshData">Refresh Data</button>
+      </div>
+      <div class="upload-zone" :class="{ 'is-dragging': isDragging }" @dragover.prevent="handleDragOver" @dragleave.prevent="handleDragLeave" @drop.prevent="handleDrop">
+        <input
+          type="file"
+          id="file-upload"
+          ref="fileInput"
+          accept=".json, .xlsx, .xls" @change="handleFileSelect"
+        />
+        <p>Drag & Drop your Excel file here, or <span>click to select</span>.</p>
+      </div>
     </div>
 
-
-    <!-- <div class="filter-buttons">
-      <button @click="setFilter('All')" :class="{ active: activeFilter === 'All' }">All</button>
-      <button @click="setFilter('New')" :class="{ active: activeFilter === 'New' }">New</button>
-      <button @click="setFilter('Modify')" :class="{ active: activeFilter === 'Modify' }">Modify</button>
-      <button @click="setFilter('Cancel')" :class="{ active: activeFilter === 'Cancel' }">Cancel</button>
-    </div> -->
-
     <div class="filter-section">
-      <div class="filter-status">
-        <p>Filter by status</p>
-        <select v-model="activeFilter">
+      <div class="filter-control">
+        <label for="regional-filter">Filter by Regional</label>
+        <select id="regional-filter" v-model="selectedRegional">
+          <option v-for="regional in regionalList" :key="regional" :value="regional">
+            {{ regional }}
+          </option>
+        </select>
+      </div>
+
+      <div class="filter-control">
+        <label for="status-filter">Filter by Status</label>
+        <select id="status-filter" v-model="statusFilter">
           <option value="All">All</option>
-          <option value="Modify">Modify</option>
           <option value="New">New</option>
+          <option value="Modify">Modify</option>
           <option value="Cancel">Cancel</option>
+        </select>
+      </div>
+
+      <div class="filter-control">
+        <label for="month-filter">Filter by Month</label>
+        <select id="month-filter" v-model="selectedMonth">
+          <option v-for="month in monthList" :key="month" :value="month">
+            {{ month }}
+          </option>
         </select>
       </div>
     </div>
     
-
-
     <div class="summary-cards">
       <div class="card">
         <h2>Total Revenue</h2>
         <p>Rp.{{ totalRevenue.toLocaleString() }}</p>
-      </div>
-      <div class="card">
-        <h2>Previous Revenue</h2>
-        <p>Rp.{{ totalPreviousRevenue.toLocaleString() }}</p>
-      </div>
-
-     <div class="card">
-        <h2>Net Revenue Change</h2>
-        <p :class="{ 'positive': netRevenueChange > 0, 'negative': netRevenueChange < 0 }">
-          Rp.{{ netRevenueChange.toLocaleString() }}
-        </p>
       </div>
 
       <div class="card">
@@ -203,145 +320,54 @@ const pieChartData = computed(() => {
       </div>
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Customer Name</th>
-          <th>Status</th>
-          <th>Current Revenue</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="customer in filteredData" :key="customer.id">
-          <td>{{ customer.customerName }}</td>
-          <td>{{ customer.status }}</td>
-          <td>${{ customer.currentRevenue.toLocaleString() }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="table-section">
+      <table>
+          <thead>
+            <tr>
+              <th>Periode</th>
+              <th>Product Label</th>
+              <th>Customer Name</th>
+              <th>Product Name</th>
+              <th>Product Group Name</th>
+              <th>LCCD</th>
+              <th>Regional</th>
+              <th>Witel</th>
+              <th>Rev Type</th>
+              <th>Revenue</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="customer in paginatedData" :key="customer.Cust_Order_Number">
+              <td>{{ customer.Periode }}</td>
+              <td>{{ customer.Product_Label }}</td>
+              <td>{{ customer.Customer_Name }}</td>
+              <td>{{ customer.Product_Name }}</td>
+              <td>{{ customer.Product_Group_Name }}</td>
+              <td>{{ customer.LCCD }}</td>
+              <td>{{ customer.Regional }}</td>
+              <td>{{ customer.Witel }}</td>
+              <td>{{ customer.Rev_Type }}</td>
+              <td>Rp.{{ (customer.Revenue || 0).toLocaleString() }}</td>
+            </tr>
+          </tbody>
+      </table>
+      <div class="pagination-controls">
+        <button @click="prevPage" :disabled="currentPage === 1">Previous</button>
+        <!-- computed property totalPages -->
+        <div class="page-input-control">
+          <span>Page</span>
+          <input
+            type="number"
+            v-model.number="currentPage"
+            min="1"
+            :max="totalPages"
+          />
+          <span>of {{ totalPages }}</span>
+        </div>
+        <button @click="nextPage" :disabled="currentPage >= totalPages">Next</button>
+      </div>
+      </div>
   </main>
 </template>
 
-<style scoped>
-* {
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  -khtml-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  text-decoration: none;
-}
-
-.upload-zone {
-  border: 2px dashed #ccc;
-  border-radius: 8px;
-  padding: 40px;
-  text-align: center;
-  margin-bottom: 20px;
-  position: relative;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-.upload-zone.is-dragging {
-  border-color: #41B883;
-  background-color: #f0fdf4;
-}
-.upload-zone p {
-  margin: 0;
-  color: #555;
-}
-.upload-zone p span {
-  color: #41B883;
-  font-weight: bold;
-  cursor: pointer;
-}
-.upload-zone input[type="file"] {
-  /* This hides the default button but keeps it functional */
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.charts-wrapper {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-}
-.chart-container h3 {
-  text-align: center;
-  margin-bottom: 15px;
-  font-weight: 600;
-}
-
-.chart-container {
-  height: 400px; /* Give the chart some vertical space */
-  margin-bottom: 40px;
-}
-
-.filter-buttons {
-  margin-bottom: 20px;
-}
-.filter-buttons button {
-  padding: 8px 16px;
-  margin-right: 10px;
-  border: 1px solid #ccc;
-  background-color: white;
-  cursor: pointer;
-  border-radius: 4px;
-}
-.filter-buttons button.active {
-  background-color: #41B883;
-  color: white;
-  border-color: #41B883;
-}
-
-/* 4. Add styles for the summary cards */
-.summary-cards {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-}
-.card {
-  flex: 1;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 16px;
-  text-align: center;
-  background-color: #f9f9f9;
-}
-.card h2 {
-  margin-top: 0;
-  font-size: 1rem;
-  color: #555;
-}
-.card p {
-  margin-bottom: 0;
-  font-size: 2rem;
-  font-weight: bold;
-}
-
-.positive {
-  color: #28a745; /* green */
-}
-.negative {
-  color: #dc3545; /* red */
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-}
-th, td {
-  border: 1px solid #ccc;
-  padding: 8px;
-  text-align: left;
-}
-th {
-  background-color: #f4f4f4;
-}
-</style>
+<style scoped src="./HomeView.css"></style>
