@@ -1,39 +1,63 @@
-<!-- File: src/components/RevenueBarChart.vue -->
 <script setup>
-import { Bar } from 'vue-chartjs';
-import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js';
+import { Line } from 'vue-chartjs';
+import { 
+  Chart as ChartJS, 
+  Title, 
+  Tooltip, 
+  Legend, 
+  LineElement, 
+  LinearScale, 
+  PointElement, 
+  CategoryScale,
+  Filler 
+} from 'chart.js';
 import { computed } from 'vue';
 
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
+ChartJS.register(
+  Title, 
+  Tooltip, 
+  Legend, 
+  LineElement, 
+  LinearScale, 
+  PointElement, 
+  CategoryScale,
+  Filler 
+);
 
+// This component expects a 'chartData' prop to be passed to it
 const props = defineProps({
   chartData: {
     type: Object,
     default: () => ({
       labels: [],
       datasets: [{ 
-        label: 'Revenue',
-        backgroundColor: '#41B883',
-        data: []
+        label: 'Total Revenue',
+        backgroundColor: 'rgba(65, 184, 131, 0.2)',
+        borderColor: '#41B883',
+        data: [],
+        fill: true
       }]
     })
   }
 });
 
+
 const safeChartData = computed(() => {
   return props.chartData || {
     labels: [],
     datasets: [{ 
-      label: 'Revenue',
-      backgroundColor: '#41B883',
-      data: []
+      label: 'Total Revenue',
+      backgroundColor: 'rgba(65, 184, 131, 0.2)',
+      borderColor: '#41B883',
+      data: [],
+      fill: true
     }]
   };
 });
 
 const chartOptions = {
   responsive: true,
-  maintainAspectRatio: false, 
+  maintainAspectRatio: false,
   layout: {
     padding: {
       left: 10,
@@ -56,6 +80,12 @@ const chartOptions = {
     },
     title: {
       display: false,
+      text: 'Revenue Trends',
+      font: {
+        family: 'Poppins',
+        size: 16,
+        weight: 600
+      }
     },
     tooltip: {
       callbacks: {
@@ -79,10 +109,13 @@ const chartOptions = {
         },
         maxRotation: 45,
         minRotation: 45,
-        padding: 8
+        padding: 8 
       },
       grid: {
-        display: false
+        display: true,
+        drawOnChartArea: true,
+        drawTicks: true,
+        color: 'rgba(0, 0, 0, 0.05)' 
       }
     },
     y: {
@@ -93,7 +126,6 @@ const chartOptions = {
           size: 11
         },
         padding: 8,
-        maxTicksLimit: 8, 
         callback: function(value) {
           if (value >= 1000000) {
             return 'Rp.' + (value / 1000000).toLocaleString() + 'M';
@@ -107,13 +139,23 @@ const chartOptions = {
         color: 'rgba(0, 0, 0, 0.05)'
       }
     }
+  },
+  elements: {
+    line: {
+      tension: 0.3
+    },
+    point: {
+      radius: 4,
+      hitRadius: 10,
+      hoverRadius: 6
+    }
   }
 };
 </script>
 
 <template>
   <div class="chart-wrapper">
-    <Bar :data="safeChartData" :options="chartOptions" />
+    <Line :data="safeChartData" :options="chartOptions" />
   </div>
 </template>
 

@@ -11,7 +11,7 @@ defineProps({
   <div class="greetings">
     <h1 class="green">{{ msg }}</h1>
     <h3>
-      Analytics Dashboard for RWS Telkom Balikpapan
+      Wholesale Performance Insight
       
     </h3>
   </div>
@@ -19,6 +19,7 @@ defineProps({
 
 <style scoped>
 h1 {
+  font-family:'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
   font-weight: 500;
   font-size: 2.6rem;
   position: relative;

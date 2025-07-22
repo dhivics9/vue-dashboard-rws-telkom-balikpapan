@@ -1,0 +1,121 @@
+/* Layout styles */
+.app-layout {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+}
+
+.app-sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  max-width: var(--sidebar-width);
+  flex-shrink: 0;
+}
+
+.main-content {
+  flex: 1;
+  padding: var(--spacing-xl);
+  overflow-y: auto;
+  background-color: var(--color-background);
+}
+
+/* Sidebar styling */
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  max-width: var(--sidebar-width);
+  background-color: var(--color-secondary);
+  color: #ecf0f1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-md);
+  height: 100%;
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+.logo {
+  width: 80px;
+  margin-bottom: var(--spacing-sm);
+}
+
+.sidebar-header h2 {
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
+  color: white;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-lg);
+  text-decoration: none;
+  color: #bdc3c7;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.nav-link:hover {
+  background-color: var(--color-secondary-dark);
+  color: white;
+}
+
+.nav-link.router-link-exact-active {
+  background-color: var(--color-primary);
+  color: white;
+  font-weight: var(--font-weight-medium);
+}
+
+/* Responsive layout */
+@media (max-width: 768px) {
+  .app-layout {
+    flex-direction: column;
+  }
+
+  .app-sidebar {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+    height: auto;
+  }
+
+  .sidebar {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+  }
+
+  .main-content {
+    padding: var(--spacing-md);
+  }
+
+  .charts-wrapper {
+    flex-direction: column;
+  }
+
+  .charts-wrapper .chart-container {
+    height: 350px;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+    padding: var(--spacing-md);
+  }
+
+  .filter-control {
+    width: 100%;
+    min-width: unset;
+  }
+}
