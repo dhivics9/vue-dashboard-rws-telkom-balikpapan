@@ -15,7 +15,7 @@
       </RouterLink>
       <RouterLink to="/submission" class="nav-link">
         <span class="material-icons">note_add</span>
-        <span>Pengajuan Dokumen</span>
+        <span>Berkas Dokumen</span>
       </RouterLink>
        <!-- Space untuk link lain di pengembangan selanjutnya -->
     </nav>

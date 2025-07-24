@@ -1,64 +1,82 @@
 <!-- File: src/views/NewSubmissionView.vue -->
 <script setup>
-import { ref } from 'vue';
+import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 
-// Gunakan useRouter untuk bisa navigasi antar halaman
 const router = useRouter();
 
-// State untuk menampung nilai dari setiap input form
-const customerName = ref('');
-const orderType = ref('Modify'); // Nilai default
-const description = ref('');
+const selectedDocumentType = ref('');
 const documentFile = ref(null);
-const isSubmitting = ref(false); // State untuk menampilkan status loading pada tombol
+const isSubmitting = ref(false);
 
-// Fungsi untuk menangani saat file dipilih oleh pengguna
+const formData = reactive({
+  description: '',
+  // Fields untuk 'berita_acara'
+  nama_pelanggan: '',
+  lokasi_kerja: '',
+  jenis_layanan: '',
+  mo: '',
+  SID: '',
+  bw_prev: '',
+  bw_new: '',
+  tanggal_mulai: '', // Anda lupa menambahkan ini di template
+  // Fields untuk 'resign_letter'
+  employee_name: '',
+  employee_id: '',
+  last_day_of_work: '',
+  reason: '',
+});
+
+
+
 const handleFileChange = (event) => {
-  // Ambil file pertama yang dipilih
   documentFile.value = event.target.files[0];
 };
 
-// Fungsi untuk mengirim form ke backend saat tombol "Submit" diklik
 const handleSubmit = async () => {
-  // Validasi sederhana: pastikan nama pelanggan dan file sudah diisi
-  if (!customerName.value || !documentFile.value) {
-    alert('Please fill in the customer name and select a file.');
+  if (!selectedDocumentType.value || !documentFile.value) {
+    alert('Please select a document type and upload a file.');
     return;
   }
+  isSubmitting.value = true;
 
-  isSubmitting.value = true; // Tampilkan status loading
+  const apiFormData = new FormData();
 
-  // FormData adalah cara standar untuk mengirim file dan data teks bersamaan
-  const formData = new FormData();
-  formData.append('customerName', customerName.value);
-  formData.append('orderType', orderType.value);
-  formData.append('description', description.value);
-  formData.append('documentFile', documentFile.value); // 'documentFile' harus cocok dengan nama di backend (multer)
+  apiFormData.append('document_type', selectedDocumentType.value);
+  apiFormData.append('description', formData.description);
+  apiFormData.append('documentFile', documentFile.value);
+
+  switch (selectedDocumentType.value) {
+    case 'berita_acara':
+      const baFields = ['nama_pelanggan', 'lokasi_kerja', 'jenis_layanan', 'mo', 'SID', 'bw_prev', 'bw_new', 'tanggal_mulai'];
+      baFields.forEach(field => apiFormData.append(field, formData[field]));
+      break;
+    case 'resign_letter':
+      const rlFields = ['employee_name', 'employee_id', 'last_day_of_work', 'reason'];
+      rlFields.forEach(field => apiFormData.append(field, formData[field]));
+      break;
+  }
 
   try {
-    const response = await fetch('http://localhost:3000/api/documents/upload', {
+    const response = await fetch('http://localhost:3000/api/documents', {
       method: 'POST',
-      body: formData,
+      body: apiFormData,
     });
 
     const result = await response.json();
 
     if (!response.ok) {
-      // Jika server mengembalikan error, tampilkan pesannya
       throw new Error(result.message || 'Upload failed due to a server error.');
     }
 
     alert('Success: ' + result.message);
-    
-    // Setelah sukses, arahkan pengguna kembali ke halaman daftar dokumen
     router.push('/submission');
 
   } catch (error) {
     console.error('Submission error:', error);
     alert('Error: ' + error.message);
   } finally {
-    isSubmitting.value = false; // Sembunyikan status loading, baik sukses maupun gagal
+    isSubmitting.value = false;
   }
 };
 </script>
@@ -67,7 +85,6 @@ const handleSubmit = async () => {
   <main>
     <div class="page-header">
       <h1 class="page-title">Submit New Document</h1>
-      <!-- Tombol untuk kembali ke halaman daftar -->
       <button class="btn btn-secondary" @click="$router.push('/submission')">
         <span class="material-icons">arrow_back</span>
         Back to List
@@ -75,48 +92,92 @@ const handleSubmit = async () => {
     </div>
 
     <div class="card">
-      <!-- @submit.prevent akan memanggil fungsi handleSubmit saat form disubmit -->
       <form @submit.prevent="handleSubmit">
-        
-        <!-- Input untuk Nama Pelanggan -->
-        <div class="form-group">
-          <label for="customer-name">Customer Name</label>
-          <input id="customer-name" type="text" v-model="customerName" required placeholder="e.g., PT. Telkom Indonesia" />
-        </div>
 
-        <!-- Dropdown untuk Jenis Order -->
         <div class="form-group">
-          <label for="order-type">Order Type</label>
-          <select id="order-type" v-model="orderType">
-            <option value="Modify">Modify</option>
-            <option value="New">New</option>
-            <option value="Cancel">Cancel</option>
+          <label for="document-type">Document Type</label>
+          <select id="document-type" v-model="selectedDocumentType" required>
+            <option disabled value="">-- Please select a type --</option>
+            <option value="berita_acara">Berita Acara</option>
+            <option value="resign_letter">Resignation Letter</option>
           </select>
         </div>
 
-        <!-- Text area untuk Deskripsi -->
         <div class="form-group">
           <label for="description">Description (Optional)</label>
-          <textarea id="description" v-model="description" rows="4" placeholder="Add any relevant notes here..."></textarea>
+          <textarea id="description" v-model="formData.description" rows="3" placeholder="Add any relevant notes here..."></textarea>
         </div>
 
-        <!-- Input untuk File Dokumen -->
-        <div class="form-group">
-          <label for="file-input">Document File (PDF, JPG, PNG, etc.)</label>
+        <div v-if="selectedDocumentType === 'berita_acara'">
+          <h3>Detail Berita Acara</h3>
+          <div class="form-group">
+            <label for="nama_pelanggan">Nama Pelanggan</label>
+            <input id="nama_pelanggan" type="text" v-model="formData.nama_pelanggan" required placeholder="e.g., Lil Dips" />
+          </div>
+          <div class="form-group">
+            <label for="lokasi_kerja">Lokasi Kerja</label>
+            <input id="lokasi_kerja" type="text" v-model="formData.lokasi_kerja" required placeholder="e.g., PT. Telkom Indonesia" />
+          </div>
+          <div class="form-group">
+            <label for="jenis_layanan">Jenis Layanan</label>
+            <input id="jenis_layanan" type="text" v-model="formData.jenis_layanan" required placeholder="e.g., Metro E" />
+          </div>
+          <div class="form-group">
+            <label for="mo">MO</label>
+            <input id="mo" type="text" v-model="formData.mo" required placeholder="e.g., 2-12345" />
+          </div>
+          <div class="form-group">
+            <label for="sid">SID</label>
+            <input id="sid" type="text" v-model="formData.SID" required placeholder="e.g., 123456" />
+          </div>
+          <div class="form-group">
+            <label for="bw_prev">Bandwidth Sebelumnya</label>
+            <input id="bw_prev" type="text" v-model="formData.bw_prev" required placeholder="e.g., 100 Mbps Backhaul 1 Corporate"/>
+          </div>
+          <div class="form-group">
+            <label for="bw_new">Bandwidth Baru</label>
+            <input id="bw_new" type="text" v-model="formData.bw_new" required placeholder="e.g., 200 Mbps Backhaul 2 Corporate"/>
+          </div>
+           <div class="form-group">
+            <label for="tanggal_mulai">Tanggal Mulai</label>
+            <input id="tanggal_mulai" type="date" v-model="formData.tanggal_mulai" required/>
+          </div>
+        </div>
+
+        <div v-else-if="selectedDocumentType === 'resign_letter'">
+          <h3>Detail Resignation Letter</h3>
+          <div class="form-group">
+            <label for="employee_name">Employee Name</label>
+            <input id="employee_name" type="text" v-model="formData.employee_name" required />
+          </div>
+          <div class="form-group">
+            <label for="employee_id">Employee ID</label>
+            <input id="employee_id" type="text" v-model="formData.employee_id" required />
+          </div>
+           <div class="form-group">
+            <label for="last_day_of_work">Last Day of Work</label>
+            <input id="last_day_of_work" type="date" v-model="formData.last_day_of_work" />
+          </div>
+           <div class="form-group">
+            <label for="reason">Reason (Optional)</label>
+            <textarea id="reason" v-model="formData.reason" rows="3"></textarea>
+          </div>
+        </div>
+        
+        <div v-if="selectedDocumentType" class="form-group">
+          <label for="file-input">Document File</label>
           <input id="file-input" type="file" @change="handleFileChange" required />
         </div>
 
-        <!-- Tombol Submit -->
-        <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
+        <button v-if="selectedDocumentType" type="submit" class="btn btn-primary" :disabled="isSubmitting">
           {{ isSubmitting ? 'Submitting...' : 'Submit Document' }}
         </button>
       </form>
     </div>
   </main>
-</template> 
+</template>
 
 <style scoped>
-  /* Menggunakan variabel dari file CSS global Anda untuk konsistensi */
   .card {
     max-width: 700px;
     margin: 0 auto;
@@ -161,7 +222,6 @@ const handleSubmit = async () => {
     margin-top: 1rem;
   }
 
-  /* Style untuk page header agar judul dan tombol sejajar */
   .page-header {
     display: flex;
     justify-content: space-between;
