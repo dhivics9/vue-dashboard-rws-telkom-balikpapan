@@ -11,8 +11,6 @@ const props = defineProps({
     default: () => [5, 10, 20, 25]
   }
 });
-
-// Get the data store
 const store = useDataStore();
 </script>
 
@@ -64,7 +62,6 @@ const store = useDataStore();
       </select>
     </div>
     
-    <!-- Conditionally render items per page -->
     <div v-if="showItemsPerPage" class="filter-control">
       <label for="items-per-page">Items per page</label>
       <select id="items-per-page" v-model="store.itemsPerPage">

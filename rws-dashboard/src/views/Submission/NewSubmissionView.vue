@@ -11,16 +11,14 @@ const isSubmitting = ref(false);
 
 const formData = reactive({
   description: '',
-  // Fields untuk 'berita_acara'
   nama_pelanggan: '',
   lokasi_kerja: '',
   jenis_layanan: '',
   mo: '',
-  SID: '',
+  sid: '',
   bw_prev: '',
   bw_new: '',
-  tanggal_mulai: '', // Anda lupa menambahkan ini di template
-  // Fields untuk 'resign_letter'
+  tanggal_mulai: '',
   employee_name: '',
   employee_id: '',
   last_day_of_work: '',
@@ -48,7 +46,7 @@ const handleSubmit = async () => {
 
   switch (selectedDocumentType.value) {
     case 'berita_acara':
-      const baFields = ['nama_pelanggan', 'lokasi_kerja', 'jenis_layanan', 'mo', 'SID', 'bw_prev', 'bw_new', 'tanggal_mulai'];
+      const baFields = ['nama_pelanggan', 'lokasi_kerja', 'jenis_layanan', 'mo', 'sid', 'bw_prev', 'bw_new', 'tanggal_mulai'];
       baFields.forEach(field => apiFormData.append(field, formData[field]));
       break;
     case 'resign_letter':
@@ -58,7 +56,7 @@ const handleSubmit = async () => {
   }
 
   try {
-    const response = await fetch('http://localhost:3000/api/documents', {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/documents`, {
       method: 'POST',
       body: apiFormData,
     });
@@ -128,7 +126,7 @@ const handleSubmit = async () => {
           </div>
           <div class="form-group">
             <label for="sid">SID</label>
-            <input id="sid" type="text" v-model="formData.SID" required placeholder="e.g., 123456" />
+            <input id="sid" type="text" v-model="formData.sid" required placeholder="e.g., 123456" />
           </div>
           <div class="form-group">
             <label for="bw_prev">Bandwidth Sebelumnya</label>

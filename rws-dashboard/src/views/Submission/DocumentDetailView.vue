@@ -5,11 +5,12 @@ import { useRoute } from 'vue-router';
 const route = useRoute();
 const document = ref(null);
 const errorState = ref(null);
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
 async function fetchDocumentDetail() {
   const docId = route.params.id;
   try {
-    const response = await fetch(`http://localhost:3000/api/documents/${docId}`);
+    const response = await fetch(`${apiBaseUrl}/api/documents/${docId}`);
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || `Server responded with status: ${response.status}`);
@@ -55,7 +56,7 @@ onMounted(fetchDocumentDetail);
                 <p><strong>Lokasi Kerja:</strong> {{ document.lokasi_kerja }}</p>
                 <p><strong>Jenis Layanan:</strong> {{ document.jenis_layanan }}</p>
                 <p><strong>MO:</strong> {{ document.mo }}</p>
-                <p><strong>SID:</strong> {{ document.SID }}</p>
+                <p><strong>SID:</strong> {{ document.sid }}</p>
                 <p><strong>Bandwidth Sebelumnya:</strong> {{ document.bw_prev }}</p>
                 <p><strong>Bandwidth Baru:</strong> {{ document.bw_new }}</p>
                 <p><strong>Tanggal Mulai:</strong> {{ document.tanggal_mulai }}</p>
@@ -70,7 +71,7 @@ onMounted(fetchDocumentDetail);
             </div>
         </div>
         
-        <a :href="`http://localhost:3000/api/documents/${document.id}/download`" class="btn btn-primary download-btn">
+        <a :href="`${apiBaseUrl}/api/documents/${document.id}/download`" class="btn btn-primary download-btn">
           <span class="material-icons">file_download</span>
           Download File
         </a>
@@ -79,14 +80,14 @@ onMounted(fetchDocumentDetail);
           <h3>File Preview</h3>
           <iframe 
             v-if="getFileExtension(document.file_name) === 'pdf'"
-            :src="`http://localhost:3000/api/documents/${document.id}/preview`" 
+            :src="`${apiBaseUrl}/api/documents/${document.id}/preview`" 
             width="100%"
             height="600px"
             frameborder="0"
           ></iframe>
           <img 
             v-else-if="['jpg', 'jpeg', 'png', 'gif'].includes(getFileExtension(document.file_name))"
-            :src="`http://localhost:3000/api/documents/${document.id}/preview`"
+            :src="`${apiBaseUrl}/api/documents/${document.id}/preview`"
             alt="File Preview"
             class="image-preview"
           />

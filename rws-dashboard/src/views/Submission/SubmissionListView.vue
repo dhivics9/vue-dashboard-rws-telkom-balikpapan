@@ -7,7 +7,7 @@ const router = useRouter();
 
 async function fetchDocuments() {
   try {
-    const response = await fetch('http://localhost:3000/api/documents');
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/documents`);
     if (!response.ok) throw new Error('Failed to fetch documents');
     documents.value = await response.json();
   } catch (error) {
@@ -23,7 +23,7 @@ async function deleteDocument(id) {
   if (!confirm('Apakah Anda yakin ingin menghapus dokumen ini?')) return;
   
   try {
-    const response = await fetch(`http://localhost:3000/api/documents/${id}`, { method: 'DELETE' });
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/documents/${id}`, { method: 'DELETE' });
     if (!response.ok) throw new Error('Failed to delete document');
     fetchDocuments();
   } catch (error) {
