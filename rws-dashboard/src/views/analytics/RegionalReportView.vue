@@ -1,12 +1,21 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 
 // State untuk menampung data laporan dan filter
 const reportData = ref([]);
 const isLoading = ref(false);
 const error = ref(null);
-// Set periode default ke bulan ini, format YYYYMM
-const selectedPeriode = ref(new Date().toISOString().slice(0, 7).replace('-', ''));
+
+// Fungsi untuk mendapatkan periode bulan ini dalam format YYYY-MM untuk input
+const getCurrentMonth = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  return `${year}-${month}`;
+};
+
+const selectedMonthInput = ref(getCurrentMonth()); // Untuk input type="month"
+const selectedPeriode = ref(getCurrentMonth().replace('-', '')); // Untuk API (YYYYMM)
 
 // Fungsi untuk memanggil API backend
 async function fetchReport() {
@@ -14,6 +23,9 @@ async function fetchReport() {
   error.value = null;
   reportData.value = [];
   try {
+    // Update selectedPeriode dari input sebelum fetch
+    selectedPeriode.value = selectedMonthInput.value.replace('-', '');
+    
     const response = await fetch(`http://localhost:3000/api/reports/regional?periode=${selectedPeriode.value}`);
     if (!response.ok) {
       throw new Error('Gagal mengambil data laporan dari server.');
@@ -42,7 +54,7 @@ async function fetchReport() {
 }
 
 // Panggil fungsi saat komponen pertama kali dimuat
-fetchReport();
+onMounted(fetchReport);
 </script>
 
 <template>
@@ -54,7 +66,7 @@ fetchReport();
       <div class="filter-control">
         <label for="periode-picker">PERIODE</label>
         <!-- Input untuk memilih bulan dan tahun -->
-        <input type="month" id="periode-picker" v-model="selectedPeriode" @change="e => selectedPeriode = e.target.value.replace('-', '')">
+        <input type="month" id="periode-picker" v-model="selectedMonthInput">
       </div>
       <button class="btn btn-primary" @click="fetchReport" :disabled="isLoading">
         <span class="material-icons">search</span>

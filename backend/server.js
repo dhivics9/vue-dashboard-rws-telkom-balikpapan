@@ -74,9 +74,7 @@ app.get('/api/reports/regional', async (req, res) => {
     }
 
     const year = periode.substring(0, 4);
-    const month = periode.substring(4, 2);
-
-    // Ini adalah query SQL yang akan melakukan semua pekerjaan berat
+    const month = periode.substring(4, 6);
     const reportQuery = `
         WITH MonthlyData AS (
             -- 1. Ambil data hanya untuk bulan yang dipilih
