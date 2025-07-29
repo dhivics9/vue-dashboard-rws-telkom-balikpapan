@@ -27,6 +27,12 @@ function getFileExtension(filename) {
   return filename.split('.').pop().toLowerCase();
 }
 
+function formatDate(dateString) {
+  if (!dateString) return 'N/A';
+  const options = { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' };
+  return new Date(dateString).toLocaleDateString('id-ID', options);
+}
+
 onMounted(fetchDocumentDetail);
 </script>
 
@@ -59,8 +65,8 @@ onMounted(fetchDocumentDetail);
                 <p><strong>SID:</strong> {{ document.sid }}</p>
                 <p><strong>Bandwidth Sebelumnya:</strong> {{ document.bw_prev }}</p>
                 <p><strong>Bandwidth Baru:</strong> {{ document.bw_new }}</p>
-                <p><strong>Tanggal Mulai:</strong> {{ document.tanggal_mulai }}</p>
-            </div>
+                <p><strong>Tanggal Mulai:</strong> {{ formatDate(document.tanggal_mulai) }}</p>
+            </div>  
 
             <div v-else-if="document.document_type === 'resign_letter'">
                 <h4>Resignation Letter Details</h4>
@@ -69,6 +75,11 @@ onMounted(fetchDocumentDetail);
                 <p><strong>Last Day of Work:</strong> {{ document.last_day_of_work }}</p>
                 <p><strong>Reason:</strong> {{ document.reason || 'No reason provided.' }}</p>
             </div>
+
+            <div v-else-if="document.document_type === 'other'">
+              <h4>General Document</h4>
+              <p class="other-details-info">This is a general document with no specific details. Please refer to the description and the file preview.</p>
+          </div>
         </div>
         
         <a :href="`${apiBaseUrl}/api/documents/${document.id}/download`" class="btn btn-primary download-btn">

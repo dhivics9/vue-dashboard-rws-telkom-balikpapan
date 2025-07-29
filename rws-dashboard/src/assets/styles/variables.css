@@ -1,46 +1,34 @@
 :root {
-  /* Color Variables */
   --color-primary: #41B883;
   --color-primary-dark: #3aa876;
-  --color-primary-light: rgba(65, 184, 131, 0.2);
+  --color-primary-light: rgba(65, 184, 131, 0.1);
   
-  --color-secondary: #2c3e50;
-  --color-secondary-dark: #1e2b38;
-
-  --color-status-new: #41B883;
-  --color-status-new-bg: #e6f7f0;
-  --color-status-modify: #E46651;
-  --color-status-modify-bg: #fff3e0;
-  --color-status-cancel: #00D8FF;
-  --color-status-cancel-bg: #e3f2fd;
+  --color-secondary: #34495e;
+  --color-secondary-dark: #2c3e50;
 
   --color-text-primary: #2c3e50;
   --color-text-secondary: #555;
-  --color-text-light: #666;
   
   --color-background: #f4f7fa;
-  --color-background-card: #f9f9f9;
-  --color-background-container: #ffffff;
+  --color-background-card: #ffffff;
   
   --color-border: #e0e0e0;
   --color-border-light: #f0f0f0;
 
-  /* Shadow Variables */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 2px 12px rgba(0, 0, 0, 0.1);
 
-  /* Typography Variables */
   --font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
     Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   
-  --font-size-xs: 0.75rem;    /* 12px */
-  --font-size-sm: 0.875rem;   /* 14px */
-  --font-size-base: 1rem;     /* 16px */
-  --font-size-lg: 1.125rem;   /* 18px */
-  --font-size-xl: 1.25rem;    /* 20px */
-  --font-size-2xl: 1.5rem;    /* 24px */
-  --font-size-3xl: 1.8rem;    /* 28px */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.8rem;
 
   --font-weight-light: 300;
   --font-weight-normal: 400;
@@ -48,25 +36,43 @@
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-  /* Spacing Variables */
-  --spacing-xs: 0.25rem;      /* 4px */
-  --spacing-sm: 0.5rem;       /* 8px */
-  --spacing-md: 1rem;         /* 16px */
-  --spacing-lg: 1.5rem;       /* 24px */
-  --spacing-xl: 2rem;         /* 32px */
-  --spacing-2xl: 2.5rem;      /* 40px */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 2.5rem;
 
-  /* Border Variables */
   --border-radius-sm: 4px;
   --border-radius-md: 6px;
   --border-radius-lg: 8px;
   --border-radius-xl: 10px;
 
-  /* Layout Variables */
   --sidebar-width: 250px;
   --content-width: 1280px;
 
-  /* Animation Variables */
   --transition-fast: 0.2s ease;
   --transition-normal: 0.3s ease;
+}
+
+html.dark-theme {
+  --color-primary: #9b59b6;
+  --color-primary-dark: #8e44ad;
+  --color-primary-light: rgba(155, 89, 182, 0.15);
+
+  --color-secondary: #34495e;
+  --color-secondary-dark: #2c3e50;
+
+  --color-text-primary: #ecf0f1;
+  --color-text-secondary: #bdc3c7;
+  
+  --color-background: #2c3e50;
+  --color-background-card: #34495e;
+  
+  --color-border: #4a627a;
+  --color-border-light: #415469;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 2px 12px rgba(0, 0, 0, 0.4);
 }

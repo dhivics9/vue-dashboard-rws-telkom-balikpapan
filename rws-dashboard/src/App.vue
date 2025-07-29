@@ -1,7 +1,10 @@
-<!-- src/App.vue -->
+// File: src/App.vue
 <script setup>
 import { RouterView } from 'vue-router';
 import Sidebar from './components/Sidebar.vue';
+import { useUiStore } from './stores/uiStore';
+
+const uiStore = useUiStore(); 
 </script>
 
 <template>

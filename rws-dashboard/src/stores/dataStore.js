@@ -3,6 +3,7 @@ import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
 
 export const useDataStore = defineStore('data', () => {
+  // --- STATE UNTUK ANALYTICS & TABEL DATA ---
   const tableData = ref([]);
   const summaryCards = ref({ totalRevenue: 0 });
   const filterOptions = ref({
@@ -10,20 +11,107 @@ export const useDataStore = defineStore('data', () => {
       witels: ['All Witels'],
       years: ['All Years']
   });
-
   const selectedRegional = ref('All Regionals');
   const selectedWitel = ref('All Witels');
   const selectedYear = ref('All Years');
   const selectedMonthNumber = ref('All');
   const statusFilter = ref('All');
-
   const isLoading = ref(false);
   const isUploading = ref(false);
   const currentPage = ref(1);
   const itemsPerPage = ref(10);
   const isDragging = ref(false);
 
+  // --- STATE BARU UNTUK BERANDA ---
+  const homepageSummary = ref({
+    kpi: { totalRevenue: 0, totalTarget: 0, achievement: 0, activeCustomers: 0 },
+    trend: [],
+    topRegionals: [],
+    recentDocuments: []
+  });
+  const isHomepageLoading = ref(false);
 
+  // --- ACTIONS ---
+
+  // Aksi untuk mengambil data tabel utama (dengan filter)
+  async function fetchDashboardData() {
+    isLoading.value = true;
+    try {
+      const params = new URLSearchParams({
+        regional: selectedRegional.value,
+        witel: selectedWitel.value,
+        year: selectedYear.value,
+        month: selectedMonthNumber.value,
+        status: statusFilter.value,
+      });
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+      const response = await fetch(`${apiBaseUrl}/api/analytics/data?${params.toString()}`);
+      if (!response.ok) throw new Error('Failed to fetch dashboard data');
+      
+      const data = await response.json();
+      tableData.value = data.tableData;
+      summaryCards.value = data.summary;
+      
+      if (filterOptions.value.regionals.length <= 1 && data.filterOptions.regionals.length > 1) {
+        filterOptions.value = data.filterOptions;
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+      tableData.value = [];
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // Aksi untuk upload file Excel
+  async function uploadAnalyticsFile(file) {
+    if (!file) return;
+    isUploading.value = true;
+    const formData = new FormData();
+    formData.append('analyticsFile', file);
+    try {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+      const response = await fetch(`${apiBaseUrl}/api/analytics/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Upload failed');
+      alert('Upload successful! Fetching new data...');
+      await fetchDashboardData();
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert(`Upload failed: ${error.message}`);
+    } finally {
+      isUploading.value = false;
+    }
+  }
+
+  // --- AKSI BARU UNTUK BERANDA ---
+  async function fetchHomepageSummary() {
+    isHomepageLoading.value = true;
+    try {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+      const response = await fetch(`${apiBaseUrl}/api/analytics/summary`);
+      if (!response.ok) throw new Error('Failed to fetch homepage summary');
+      homepageSummary.value = await response.json();
+    } catch (error) {
+      console.error("Error fetching homepage summary:", error);
+    } finally {
+      isHomepageLoading.value = false;
+    }
+  }
+
+  // Watcher untuk memanggil API secara otomatis setiap kali filter berubah
+  watch(
+    [selectedRegional, selectedWitel, selectedYear, selectedMonthNumber, statusFilter],
+    () => {
+      currentPage.value = 1; 
+      fetchDashboardData();
+    }
+  );
+
+  // --- GETTERS ---
   const regionalList = computed(() => filterOptions.value.regionals);
   const witelList = computed(() => filterOptions.value.witels);
   const yearList = computed(() => filterOptions.value.years);
@@ -36,76 +124,7 @@ export const useDataStore = defineStore('data', () => {
       { value: '09', label: 'September' }, { value: '10', label: 'October' },
       { value: '11', label: 'November' }, { value: '12', label: 'December' }
   ]);
-
-
-  async function fetchDashboardData() {
-    isLoading.value = true;
-    try {
-      const params = new URLSearchParams({
-        regional: selectedRegional.value,
-        witel: selectedWitel.value,
-        year: selectedYear.value,
-        month: selectedMonthNumber.value,
-        status: statusFilter.value,
-      });
-
-      const response = await fetch(`http://localhost:3000/api/analytics/data?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch dashboard data');
-      
-      const data = await response.json();
-      tableData.value = data.tableData;
-      summaryCards.value = data.summary;
-      
-      if (filterOptions.value.regionals.length <= 1 && data.filterOptions.regionals.length > 1) {
-        filterOptions.value = data.filterOptions;
-      }
-
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      tableData.value = [];
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  async function uploadAnalyticsFile(file) {
-    if (!file) return;
-    isUploading.value = true;
-    const formData = new FormData();
-    formData.append('analyticsFile', file);
-    try {
-      const response = await fetch('http://localhost:3000/api/analytics/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || 'Upload failed');
-      alert('Upload successful! Fetching new data...');
-      
-      selectedRegional.value = 'All Regionals';
-      selectedWitel.value = 'All Witels';
-      selectedYear.value = 'All Years';
-      selectedMonthNumber.value = 'All';
-      statusFilter.value = 'All';
-
-      await fetchDashboardData(); 
-
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      alert(`Upload failed: ${error.message}`);
-    } finally {
-      isUploading.value = false;
-    }
-  }
-
-  watch(
-    [selectedRegional, selectedWitel, selectedYear, selectedMonthNumber, statusFilter],
-    () => {
-      currentPage.value = 1; 
-      fetchDashboardData();
-    }
-  );
-
+  
   const paginatedData = computed(() => {
     const start = (currentPage.value - 1) * itemsPerPage.value;
     const end = start + itemsPerPage.value;
@@ -181,12 +200,13 @@ export const useDataStore = defineStore('data', () => {
     tableData, summaryCards, filterOptions,
     selectedRegional, selectedWitel, selectedYear, selectedMonthNumber, statusFilter,
     isLoading, isUploading, currentPage, itemsPerPage, isDragging,
+    homepageSummary, isHomepageLoading,
     
     // Getters
     regionalList, witelList, yearList, monthNumberList,
     paginatedData, totalPages, revenueChartData, pieChartData, revenueLineChartData,
     
     // Actions
-    fetchDashboardData, uploadAnalyticsFile, setDragging,
+    fetchDashboardData, uploadAnalyticsFile, setDragging, fetchHomepageSummary,
   };
 });

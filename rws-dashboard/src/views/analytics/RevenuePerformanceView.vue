@@ -1,38 +1,36 @@
+<!-- File: src/views/analytics/RegionalReportView.vue -->
 <script setup>
 import { ref, onMounted } from 'vue';
 
-// State untuk menampung data laporan dan filter
 const reportData = ref([]);
 const isLoading = ref(false);
 const error = ref(null);
 
-// Fungsi untuk mendapatkan periode bulan ini dalam format YYYY-MM untuk input
-const getCurrentMonth = () => {
+const getCurrentMonthForInput = () => {
   const now = new Date();
   const year = now.getFullYear();
   const month = (now.getMonth() + 1).toString().padStart(2, '0');
   return `${year}-${month}`;
 };
 
-const selectedMonthInput = ref(getCurrentMonth()); // Untuk input type="month"
-const selectedPeriode = ref(getCurrentMonth().replace('-', '')); // Untuk API (YYYYMM)
+const selectedMonthInput = ref(getCurrentMonthForInput());
 
-// Fungsi untuk memanggil API backend
 async function fetchReport() {
   isLoading.value = true;
   error.value = null;
   reportData.value = [];
   try {
-    // Update selectedPeriode dari input sebelum fetch
-    selectedPeriode.value = selectedMonthInput.value.replace('-', '');
+    const periodeForAPI = selectedMonthInput.value.replace('-', '');
     
-    const response = await fetch(`http://localhost:3000/api/reports/regional?periode=${selectedPeriode.value}`);
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+    const response = await fetch(`${apiBaseUrl}/api/reports/regional?periode=${periodeForAPI}`);
+    
     if (!response.ok) {
-      throw new Error('Gagal mengambil data laporan dari server.');
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Gagal mengambil data laporan dari server.');
     }
     const data = await response.json();
     
-    // Hitung total untuk baris terakhir
     const total = {
       regional: 'TOTAL',
       tgt_mtd: data.reduce((sum, item) => sum + parseFloat(item.tgt_mtd), 0),
@@ -40,7 +38,6 @@ async function fetchReport() {
       tgt_ytd: data.reduce((sum, item) => sum + parseFloat(item.tgt_ytd), 0),
       real_ytd: data.reduce((sum, item) => sum + parseFloat(item.real_ytd), 0),
     };
-    // Hitung ACH total
     total.ach_mtd = total.tgt_mtd ? (total.real_mtd / total.tgt_mtd) * 100 : 0;
     total.ach_ytd = total.tgt_ytd ? (total.real_ytd / total.tgt_ytd) * 100 : 0;
 
@@ -53,19 +50,18 @@ async function fetchReport() {
   }
 }
 
-// Panggil fungsi saat komponen pertama kali dimuat
 onMounted(fetchReport);
+
 </script>
 
 <template>
   <main>
-    <h1 class="page-title">Revenue Performance - Per Regional</h1>
+    <h1 class="page-title">Revenue Performance</h1>
 
     <!-- Filter Section -->
     <div class="card filter-section">
       <div class="filter-control">
         <label for="periode-picker">PERIODE</label>
-        <!-- Input untuk memilih bulan dan tahun -->
         <input type="month" id="periode-picker" v-model="selectedMonthInput">
       </div>
       <button class="btn btn-primary" @click="fetchReport" :disabled="isLoading">
@@ -74,28 +70,24 @@ onMounted(fetchReport);
       </button>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="isLoading" class="loading-state">Loading report...</div>
-    <!-- Error State -->
-    <div v-if="error" class="error-state">{{ error }}</div>
+    <div v-if="isLoading" class="loading-state card"><p>Memuat laporan...</p></div>
+    <div v-else-if="error" class="error-state card"><p>{{ error }}</p></div>
 
-    <!-- Report Table -->
-    <div v-if="reportData.length > 0" class="card report-table-card">
+    <div v-else-if="reportData.length > 0" class="card report-table-card">
       <div class="report-header">
-        <h3>REPORT REVENUE - PER REGIONAL (PERIODE: {{ selectedPeriode }})</h3>
+        <h3>REPORT REVENUE - PER REGIONAL (PERIODE: {{ selectedMonthInput }})</h3>
         <div class="action-buttons">
           <button class="btn btn-sm btn-secondary">Excel</button>
           <button class="btn btn-sm btn-secondary">Copy</button>
           <button class="btn btn-sm btn-secondary">JPEG</button>
         </div>
       </div>
-      
       <table>
         <thead>
           <tr>
             <th rowspan="2">REGIONAL</th>
-            <th colspan="4">MTD {{ selectedPeriode }}</th>
-            <th colspan="4">YTD {{ selectedPeriode }}</th>
+            <th :colspan="4">MTD {{ selectedMonthInput }}</th>
+            <th :colspan="4">YTD {{ selectedMonthInput }}</th>
           </tr>
           <tr>
             <!-- MTD Headers -->
@@ -114,13 +106,13 @@ onMounted(fetchReport);
           <tr v-for="(row, index) in reportData" :key="index" :class="{ 'total-row': row.regional === 'TOTAL' }">
             <td>{{ row.regional }}</td>
             <!-- MTD Data -->
-            <td>{{ parseFloat(row.tgt_mtd).toLocaleString() }}</td>
-            <td>{{ parseFloat(row.real_mtd).toLocaleString() }}</td>
+            <td>{{ parseFloat(row.tgt_mtd).toLocaleString('id-ID') }}</td>
+            <td>{{ parseFloat(row.real_mtd).toLocaleString('id-ID') }}</td>
             <td>{{ parseFloat(row.ach_mtd).toFixed(2) }}%</td>
             <td>{{ row.rank_mtd || '-' }}</td>
             <!-- YTD Data -->
-            <td>{{ parseFloat(row.tgt_ytd).toLocaleString() }}</td>
-            <td>{{ parseFloat(row.real_ytd).toLocaleString() }}</td>
+            <td>{{ parseFloat(row.tgt_ytd).toLocaleString('id-ID') }}</td>
+            <td>{{ parseFloat(row.real_ytd).toLocaleString('id-ID') }}</td>
             <td>{{ parseFloat(row.ach_ytd).toFixed(2) }}%</td>
             <td>{{ row.rank_ytd || '-' }}</td>
           </tr>
@@ -136,17 +128,40 @@ onMounted(fetchReport);
   gap: 1rem;
   align-items: flex-end;
   margin-bottom: 2rem;
+  padding: 1rem 1.5rem;
+}
+.filter-control {
+  display: flex;
+  flex-direction: column;
+}
+.filter-control label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: var(--color-text-secondary);
+}
+.filter-control input[type="month"] {
+  padding: 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  font-family: var(--font-family);
 }
 
 .report-table-card {
-  overflow-x: auto; /* Agar tabel bisa di-scroll di layar kecil */
+  overflow-x: auto;
 }
 
 .report-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.report-header h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
 }
 
 .action-buttons {
@@ -157,7 +172,7 @@ onMounted(fetchReport);
 table {
   width: 100%;
   border-collapse: collapse;
-  white-space: nowrap; /* Mencegah teks turun baris */
+  white-space: nowrap;
 }
 
 th, td {
@@ -171,14 +186,15 @@ th {
   color: white;
   text-align: center;
   font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-/* Header grup (MTD, YTD) */
 thead tr:first-child th {
   background-color: #2c3e50;
 }
 
-/* Header sub-kolom (TGT, REAL, etc) */
 thead tr:last-child th {
   background-color: #34495e;
 }
@@ -186,6 +202,13 @@ thead tr:last-child th {
 td:first-child, th:first-child {
   text-align: left;
   font-weight: 500;
+  position: sticky;
+  left: 0;
+  background-color: var(--color-background-card);
+}
+
+thead th:first-child {
+    background-color: #2c3e50;
 }
 
 .total-row {
@@ -193,7 +216,12 @@ td:first-child, th:first-child {
   background-color: var(--color-background);
 }
 
-.total-row td {
-  color: var(--color-text-primary);
+.total-row td:first-child {
+    background-color: var(--color-background);
+}
+
+.loading-state, .error-state {
+    text-align: center;
+    padding: 2rem;
 }
 </style>

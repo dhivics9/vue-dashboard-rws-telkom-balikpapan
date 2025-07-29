@@ -98,6 +98,7 @@ const handleSubmit = async () => {
             <option disabled value="">-- Please select a type --</option>
             <option value="berita_acara">Berita Acara</option>
             <option value="resign_letter">Resignation Letter</option>
+            <option value="other">Other Document</option>
           </select>
         </div>
 
@@ -160,6 +161,10 @@ const handleSubmit = async () => {
             <label for="reason">Reason (Optional)</label>
             <textarea id="reason" v-model="formData.reason" rows="3"></textarea>
           </div>
+        </div>
+
+        <div v-else-if="selectedDocumentType === 'other'" class="other-details-info">
+            <p>No specific details are required for this document type. Please provide a clear description above.</p>
         </div>
         
         <div v-if="selectedDocumentType" class="form-group">

@@ -9,13 +9,22 @@ const router = createRouter({
       name: 'dashboard',
       component: () => import('../views/analytics/DashboardIndex.vue')
     },
-
     {
-      path: '/table',
-      name: 'table',
-      component: () => import('../views/analytics/TableView.vue')
+      path: '/analytics',
+      component: () => import('../views/analytics/AnalyticsIndex.vue'),
+      children: [
+        {
+          path: 'table',
+          name: 'analytics-table',
+          component: () => import('../views/analytics/TableView.vue')
+        },
+        {
+          path: 'regional-report',
+          name: 'analytics-regional-report',
+          component: () => import('../views/analytics/RevenuePerformanceView.vue')
+        }
+      ]
     },
-    // Nested route submission
     {
       path: '/submission',
       name: 'submission',
@@ -35,11 +44,6 @@ const router = createRouter({
       path: ':id',
       name: 'submission-detail',
       component: () => import('../views/Submission/DocumentDetailView.vue')
-    },
-    {
-      path: '/report',
-      name: 'report',
-      component: () => import('../views/analytics/RegionalReportView.vue')
     },
       ]
     }
