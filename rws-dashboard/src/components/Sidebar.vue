@@ -49,6 +49,11 @@ function toggleMenu(menuName) {
       </RouterLink>
     </nav>
 
+    <RouterLink to="/tools/json-converter" class="nav-link">
+        <span class="material-icons">transform</span>
+        <span>JSON Converter</span>
+    </RouterLink>
+
     <div class="sidebar-footer">
       <ThemeSwitcher />
     </div>

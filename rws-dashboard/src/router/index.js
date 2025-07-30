@@ -28,25 +28,30 @@ const router = createRouter({
     {
       path: '/submission',
       name: 'submission',
-      component: () => import('../views/Submission/SubmissionIndex.vue'),
+      component: () => import('../views/submission/SubmissionIndex.vue'),
       children: [
         {
       path: '', 
       name: 'submission-list',
-      component: () => import('../views/Submission/SubmissionListView.vue')
+      component: () => import('../views/submission/SubmissionListView.vue')
     },
     {
       path: 'new',
       name: 'submission-new',
-      component: () => import('../views/Submission/NewSubmissionView.vue')
+      component: () => import('../views/submission/NewSubmissionView.vue')
     },
     {
       path: ':id',
       name: 'submission-detail',
-      component: () => import('../views/Submission/DocumentDetailView.vue')
+      component: () => import('../views/submission/DocumentDetailView.vue')
     },
       ]
-    }
+    },
+    {
+      path: '/tools/json-converter',
+      name: 'json-converter',
+      component: () => import('../views/tools/JsonConverterView.vue')
+    },
   ]
 })
 
