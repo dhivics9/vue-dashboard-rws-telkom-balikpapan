@@ -8,6 +8,26 @@ const __dirname = path.dirname(__filename);
 
 // Get all documents with details
 export const getAllDocuments = async (req, res) => {
+  const { search, type } = req.query;
+
+  let whereClauses = [];
+  const queryParams = [];
+  let paramIndex = 1;
+
+  if (search) {
+    whereClauses.push(`(d.file_name ILIKE $${paramIndex} OR dd.description ILIKE $${paramIndex} OR dba.nama_pelanggan ILIKE $${paramIndex} OR drl.employee_name ILIKE $${paramIndex})`);
+    queryParams.push(`%${search}%`);
+    paramIndex++;
+  }
+
+  if (type && type !== 'all') {
+    whereClauses.push(`dd.document_type = $${paramIndex}`);
+    queryParams.push(type);
+    paramIndex++;
+  }
+
+  const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
   const sql = `
     SELECT dd.id, dd.document_type, d.file_name, d.file_type, d.upload_timestamp,
            COALESCE(dba.nama_pelanggan, drl.employee_name) as primary_subject
@@ -15,16 +35,17 @@ export const getAllDocuments = async (req, res) => {
     JOIN public.documents d ON dd.document_id = d.id
     LEFT JOIN public.details_berita_acara dba ON dd.id = dba.detail_id
     LEFT JOIN public.details_resign_letter drl ON dd.id = drl.detail_id
+    ${whereString}
     ORDER BY d.upload_timestamp DESC`;
+
   try {
-    const { rows } = await pool.query(sql);
+    const { rows } = await pool.query(sql, queryParams);
     res.json(rows);
   } catch (err) {
     console.error("Error fetching documents:", err);
     res.status(500).json({ message: 'Failed to fetch documents.' });
   }
 };
-
 
 // Get document details by ID
 export const getDocumentById = async (req, res) => {

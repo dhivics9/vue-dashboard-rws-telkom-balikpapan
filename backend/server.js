@@ -8,6 +8,8 @@ import pool from './db.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import documentRoutes from './routes/documentRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
+import toolRoutes from './routes/toolRoutes.js';
+import syncRoutes from './routes/syncRoutes.js';
 
 dotenv.config(); 
 const __filename = fileURLToPath(import.meta.url);
@@ -50,6 +52,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/tools', toolRoutes);
+app.use('/api/sync', syncRoutes);
+
 
 app.listen(PORT, () => {
   console.log(`Backend server "Wholphin" berjalan di http://localhost:${PORT}`);

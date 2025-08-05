@@ -52,6 +52,16 @@ const router = createRouter({
       name: 'json-converter',
       component: () => import('../views/tools/JsonConverterView.vue')
     },
+    {
+      path: '/tools/api-explorer',
+      name: 'api-explorer',
+      component: () => import('../views/tools/ApiExplorerView.vue')
+    },
+    {
+      path: '/tools/sync-data',
+      name: 'sync-data',
+      component: () => import('../views/tools/SyncDataView.vue')
+    },
   ]
 })
 

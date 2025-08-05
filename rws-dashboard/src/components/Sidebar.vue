@@ -20,6 +20,7 @@ function toggleMenu(menuName) {
     <div class="sidebar-header">
       <img src="@/assets/wholphin_logo.png" alt="Wholphin Logo" class="logo" />
       <h2>WHOLPHIN</h2>
+      <h4>Wholesale Performance Insight</h4>
     </div>
     <nav class="sidebar-nav">
       <RouterLink to="/" class="nav-link">
@@ -53,6 +54,17 @@ function toggleMenu(menuName) {
         <span class="material-icons">transform</span>
         <span>JSON Converter</span>
     </RouterLink>
+
+    <RouterLink to="/tools/api-explorer" class="nav-link">
+      <span class="material-icons">travel_explore</span>
+      <span>API Explorer</span>
+    </RouterLink>
+
+    <RouterLink to="/tools/sync-data" class="nav-link">
+      <span class="material-icons">sync</span>
+      <span>Sinkronisasi Data</span>
+    </RouterLink>
+
 
     <div class="sidebar-footer">
       <ThemeSwitcher />

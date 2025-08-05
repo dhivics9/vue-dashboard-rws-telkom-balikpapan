@@ -3,7 +3,6 @@ import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
 
 export const useDataStore = defineStore('data', () => {
-  // --- STATE UNTUK ANALYTICS & TABEL DATA ---
   const tableData = ref([]);
   const summaryCards = ref({ totalRevenue: 0 });
   const filterOptions = ref({
@@ -21,8 +20,9 @@ export const useDataStore = defineStore('data', () => {
   const currentPage = ref(1);
   const itemsPerPage = ref(10);
   const isDragging = ref(false);
+  const isSyncing = ref(false);
+  const syncStatus = ref('');
 
-  // --- STATE BARU UNTUK BERANDA ---
   const homepageSummary = ref({
     kpi: { totalRevenue: 0, totalTarget: 0, achievement: 0, activeCustomers: 0 },
     trend: [],
@@ -31,9 +31,42 @@ export const useDataStore = defineStore('data', () => {
   });
   const isHomepageLoading = ref(false);
 
-  // --- ACTIONS ---
+  async function startSyncProcess(targetFile) {
+    if (!targetFile) return;
+    isSyncing.value = true;
+    syncStatus.value = 'Memulai proses sinkronisasi...\n';
 
-  // Aksi untuk mengambil data tabel utama (dengan filter)
+    const formData = new FormData();
+    formData.append('targetFile', targetFile);
+
+    try {
+      syncStatus.value += 'Mengirim permintaan ke server...\n';
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+      const response = await fetch(`${apiBaseUrl}/api/sync/start`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || 'Sinkronisasi gagal.');
+      }
+      
+      syncStatus.value += `SUKSES: ${result.message}\nMemuat ulang data dashboard...`;
+      alert('Sinkronisasi berhasil!');
+      await fetchDashboardData();
+      await fetchHomepageSummary();
+
+    } catch (error) {
+      console.error("Error during sync process:", error);
+      syncStatus.value += `ERROR: ${error.message}`;
+      alert(`Sinkronisasi gagal: ${error.message}`);
+    } finally {
+      isSyncing.value = false;
+    }
+  }
+
+
   async function fetchDashboardData() {
     isLoading.value = true;
     try {
@@ -63,7 +96,6 @@ export const useDataStore = defineStore('data', () => {
     }
   }
 
-  // Aksi untuk upload file Excel
   async function uploadAnalyticsFile(file) {
     if (!file) return;
     isUploading.value = true;
@@ -87,7 +119,6 @@ export const useDataStore = defineStore('data', () => {
     }
   }
 
-  // --- AKSI BARU UNTUK BERANDA ---
   async function fetchHomepageSummary() {
     isHomepageLoading.value = true;
     try {
@@ -102,7 +133,6 @@ export const useDataStore = defineStore('data', () => {
     }
   }
 
-  // Watcher untuk memanggil API secara otomatis setiap kali filter berubah
   watch(
     [selectedRegional, selectedWitel, selectedYear, selectedMonthNumber, statusFilter],
     () => {
@@ -111,7 +141,6 @@ export const useDataStore = defineStore('data', () => {
     }
   );
 
-  // --- GETTERS ---
   const regionalList = computed(() => filterOptions.value.regionals);
   const witelList = computed(() => filterOptions.value.witels);
   const yearList = computed(() => filterOptions.value.years);
@@ -200,13 +229,13 @@ export const useDataStore = defineStore('data', () => {
     tableData, summaryCards, filterOptions,
     selectedRegional, selectedWitel, selectedYear, selectedMonthNumber, statusFilter,
     isLoading, isUploading, currentPage, itemsPerPage, isDragging,
-    homepageSummary, isHomepageLoading,
+    homepageSummary, isHomepageLoading, isSyncing, syncStatus,
     
     // Getters
     regionalList, witelList, yearList, monthNumberList,
     paginatedData, totalPages, revenueChartData, pieChartData, revenueLineChartData,
     
     // Actions
-    fetchDashboardData, uploadAnalyticsFile, setDragging, fetchHomepageSummary,
+    fetchDashboardData, uploadAnalyticsFile, setDragging, fetchHomepageSummary, startSyncProcess,
   };
 });

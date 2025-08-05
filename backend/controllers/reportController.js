@@ -2,54 +2,65 @@ import pool from '../db.js';
 
 export const getRegionalReport = async (req, res) => {
     const { periode } = req.query;
-
     if (!periode || periode.length !== 6) {
         return res.status(400).json({ message: 'Parameter "periode" (format YYYYMM) diperlukan.' });
     }
 
     const periodeInt = parseInt(periode, 10);
     const yearInt = parseInt(periode.substring(0, 4), 10);
-    const monthInt = parseInt(periode.substring(4, 6), 10);
 
     const reportQuery = `
-        WITH MonthlyData AS (
-            SELECT
-                regional,
-                SUM(target) as mtd_target,
-                SUM(revenue) as mtd_revenue
-            FROM public.revenues
-            WHERE periode = $1
-            GROUP BY regional
+        WITH AllRegionals AS (
+            -- Membuat daftar semua regional yang ada di data sales
+            SELECT DISTINCT regional FROM public.sales_data WHERE regional IS NOT NULL
+        ),
+        MonthlyData AS (
+            -- Menghitung revenue MTD per regional
+            SELECT 
+                s.regional,
+                SUM(mr.revenue) as mtd_revenue
+            FROM public.monthly_revenues mr
+            JOIN public.sales_data s ON mr.cust_order_number = s.cust_order_number
+            WHERE mr.periode = $1
+            GROUP BY s.regional
         ),
         YearlyData AS (
+            -- Menghitung revenue YTD per regional
+            SELECT 
+                s.regional,
+                SUM(mr.revenue) as ytd_revenue
+            FROM public.monthly_revenues mr
+            JOIN public.sales_data s ON mr.cust_order_number = s.cust_order_number
+            WHERE mr.periode >= ($2 * 100 + 1) AND mr.periode <= $1
+            GROUP BY s.regional
+        ),
+        TargetData AS (
+            -- Menghitung target MTD dan YTD per regional
             SELECT
                 regional,
-                SUM(target) as ytd_target,
-                SUM(revenue) as ytd_revenue
-            FROM public.revenues
+                SUM(CASE WHEN periode = $1 THEN target ELSE 0 END) as mtd_target,
+                SUM(target) as ytd_target
+            FROM public.targets
             WHERE periode >= ($2 * 100 + 1) AND periode <= $1
             GROUP BY regional
         )
+        -- Menggabungkan semua data menggunakan LEFT JOIN dari daftar semua regional
         SELECT
-            COALESCE(m.regional, y.regional) as regional,
-            COALESCE(m.mtd_target, 0) as tgt_mtd,
-            COALESCE(m.mtd_revenue, 0) as real_mtd,
-            CASE 
-                WHEN COALESCE(m.mtd_target, 0) = 0 THEN 0 
-                ELSE (COALESCE(m.mtd_revenue, 0) / m.mtd_target) * 100 
-            END as ach_mtd,
-            RANK() OVER (ORDER BY (CASE WHEN COALESCE(m.mtd_target, 0) = 0 THEN 0 ELSE (COALESCE(m.mtd_revenue, 0) / m.mtd_target) END) DESC) as rank_mtd,
+            ar.regional,
+            COALESCE(td.mtd_target, 0) as tgt_mtd,
+            COALESCE(md.mtd_revenue, 0) as real_mtd,
+            CASE WHEN COALESCE(td.mtd_target, 0) = 0 THEN 0 ELSE (COALESCE(md.mtd_revenue, 0) / td.mtd_target) * 100 END as ach_mtd,
+            RANK() OVER (ORDER BY (CASE WHEN COALESCE(td.mtd_target, 0) = 0 THEN 0 ELSE (COALESCE(md.mtd_revenue, 0) / td.mtd_target) END) DESC) as rank_mtd,
             
-            COALESCE(y.ytd_target, 0) as tgt_ytd,
-            COALESCE(y.ytd_revenue, 0) as real_ytd,
-            CASE 
-                WHEN COALESCE(y.ytd_target, 0) = 0 THEN 0 
-                ELSE (COALESCE(y.ytd_revenue, 0) / y.ytd_target) * 100 
-            END as ach_ytd,
-            RANK() OVER (ORDER BY (CASE WHEN COALESCE(y.ytd_target, 0) = 0 THEN 0 ELSE (COALESCE(y.ytd_revenue, 0) / y.ytd_target) END) DESC) as rank_ytd
-        FROM MonthlyData m
-        FULL OUTER JOIN YearlyData y ON m.regional = y.regional
-        ORDER BY regional;
+            COALESCE(td.ytd_target, 0) as tgt_ytd,
+            COALESCE(yd.ytd_revenue, 0) as real_ytd,
+            CASE WHEN COALESCE(td.ytd_target, 0) = 0 THEN 0 ELSE (COALESCE(yd.ytd_revenue, 0) / td.ytd_target) * 100 END as ach_ytd,
+            RANK() OVER (ORDER BY (CASE WHEN COALESCE(td.ytd_target, 0) = 0 THEN 0 ELSE (COALESCE(yd.ytd_revenue, 0) / td.ytd_target) END) DESC) as rank_ytd
+        FROM AllRegionals ar
+        LEFT JOIN MonthlyData md ON ar.regional = md.regional
+        LEFT JOIN YearlyData yd ON ar.regional = yd.regional
+        LEFT JOIN TargetData td ON ar.regional = td.regional
+        ORDER BY ar.regional;
     `;
 
     try {
