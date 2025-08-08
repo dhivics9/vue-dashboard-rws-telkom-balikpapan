@@ -41,6 +41,9 @@ function toggleMenu(menuName) {
           <RouterLink to="/analytics/regional-report" class="nav-link">
             <span>Revenue Performance</span>
           </RouterLink>
+          <RouterLink to="/analytics/product-summary" class="nav-link">
+            <span>Laporan Produk</span>
+          </RouterLink>
         </div>
       </div>
 
@@ -61,8 +64,8 @@ function toggleMenu(menuName) {
     </RouterLink>
 
     <RouterLink to="/tools/sync-data" class="nav-link">
-      <span class="material-icons">sync</span>
-      <span>Sinkronisasi Data</span>
+      <span class="material-icons">database</span>
+      <span>Manajemen Data</span>
     </RouterLink>
 
 

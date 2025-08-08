@@ -6,7 +6,7 @@ import { onMounted } from 'vue';
 const store = useDataStore();
 
 const exportToExcel = () => {
-  alert('Export functionality will be implemented here');
+  alert('Export functionality is not implemented yet.');
 };
 
 onMounted(() => {

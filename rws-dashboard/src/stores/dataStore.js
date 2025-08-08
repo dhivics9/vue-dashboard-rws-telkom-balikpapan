@@ -3,8 +3,14 @@ import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
 
 export const useDataStore = defineStore('data', () => {
+  // --- STATE ---
   const tableData = ref([]);
-  const summaryCards = ref({ totalRevenue: 0 });
+  const homepageSummary = ref({
+    kpi: { totalRevenue: 0, totalTarget: 0, achievement: 0, activeCustomers: 0 },
+    trend: [],
+    topRegionals: [],
+    recentDocuments: []
+  });
   const filterOptions = ref({
       regionals: ['All Regionals'],
       witels: ['All Witels'],
@@ -15,107 +21,154 @@ export const useDataStore = defineStore('data', () => {
   const selectedYear = ref('All Years');
   const selectedMonthNumber = ref('All');
   const statusFilter = ref('All');
+
+  // State UI
   const isLoading = ref(false);
-  const isUploading = ref(false);
+  const isHomepageLoading = ref(false);
+  const isUploadingTarget = ref(false);
+  const isApiSyncing = ref(false);
   const currentPage = ref(1);
   const itemsPerPage = ref(10);
-  const isDragging = ref(false);
-  const isSyncing = ref(false);
-  const syncStatus = ref('');
+  const isUploading = ref(false);
 
-  const homepageSummary = ref({
-    kpi: { totalRevenue: 0, totalTarget: 0, achievement: 0, activeCustomers: 0 },
-    trend: [],
-    topRegionals: [],
-    recentDocuments: []
-  });
-  const isHomepageLoading = ref(false);
-
-  async function startSyncProcess(targetFile) {
-    if (!targetFile) return;
-    isSyncing.value = true;
-    syncStatus.value = 'Memulai proses sinkronisasi...\n';
-
+  // --- ACTIONS ---
+  async function uploadAllFiles(files) {
+    isUploading.value = true;
     const formData = new FormData();
-    formData.append('targetFile', targetFile);
+    // Lampirkan setiap file ke FormData
+    Object.keys(files).forEach(key => {
+        if (files[key]) {
+            formData.append(key, files[key]);
+        }
+    });
 
     try {
-      syncStatus.value += 'Mengirim permintaan ke server...\n';
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-      const response = await fetch(`${apiBaseUrl}/api/sync/start`, {
+      const response = await fetch(`${apiBaseUrl}/api/upload/all`, {
         method: 'POST',
         body: formData,
       });
 
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.message || 'Sinkronisasi gagal.');
+        throw new Error(result.message || 'Upload gagal.');
       }
       
-      syncStatus.value += `SUKSES: ${result.message}\nMemuat ulang data dashboard...`;
-      alert('Sinkronisasi berhasil!');
+      alert('Upload semua file berhasil! Memuat ulang data...');
       await fetchDashboardData();
       await fetchHomepageSummary();
 
     } catch (error) {
-      console.error("Error during sync process:", error);
-      syncStatus.value += `ERROR: ${error.message}`;
-      alert(`Sinkronisasi gagal: ${error.message}`);
+      console.error("Error during multi-file upload:", error);
+      alert(`Upload gagal: ${error.message}`);
     } finally {
-      isSyncing.value = false;
+      isUploading.value = false;
     }
   }
+  
+  async function uploadTargetFile(targetFile) {
+    if (!targetFile) return;
+    isUploadingTarget.value = true;
 
-
-  async function fetchDashboardData() {
-    isLoading.value = true;
-    try {
-      const params = new URLSearchParams({
-        regional: selectedRegional.value,
-        witel: selectedWitel.value,
-        year: selectedYear.value,
-        month: selectedMonthNumber.value,
-        status: statusFilter.value,
-      });
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-      const response = await fetch(`${apiBaseUrl}/api/analytics/data?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch dashboard data');
-      
-      const data = await response.json();
-      tableData.value = data.tableData;
-      summaryCards.value = data.summary;
-      
-      if (filterOptions.value.regionals.length <= 1 && data.filterOptions.regionals.length > 1) {
-        filterOptions.value = data.filterOptions;
-      }
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      tableData.value = [];
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  async function uploadAnalyticsFile(file) {
-    if (!file) return;
-    isUploading.value = true;
     const formData = new FormData();
-    formData.append('analyticsFile', file);
+    formData.append('targetFile', targetFile);
+
     try {
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-      const response = await fetch(`${apiBaseUrl}/api/analytics/upload`, {
+      const response = await fetch(`${apiBaseUrl}/api/targets/upload`, {
         method: 'POST',
         body: formData,
       });
+
       const result = await response.json();
-      if (!response.ok) throw new Error(result.message || 'Upload failed');
-      alert('Upload successful! Fetching new data...');
+      if (!response.ok) {
+        throw new Error(result.message || 'Upload file target gagal.');
+      }
+      
+      alert('Upload file target berhasil!');
       await fetchDashboardData();
+      await fetchHomepageSummary();
+
     } catch (error) {
-      console.error("Error uploading file:", error);
-      alert(`Upload failed: ${error.message}`);
+      console.error("Error during target upload:", error);
+      alert(`Upload gagal: ${error.message}`);
     } finally {
-      isUploading.value = false;
+      isUploadingTarget.value = false;
+    }
+  }
+
+  async function triggerApiSync() {
+    isApiSyncing.value = true;
+    try {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+      const response = await fetch(`${apiBaseUrl}/api/sync/trigger-api-sync`, {
+        method: 'POST',
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || 'Gagal memicu sinkronisasi.');
+      }
+      
+      alert('Sinkronisasi data API berhasil! Memuat ulang data dashboard...');
+      await fetchDashboardData();
+      await fetchHomepageSummary();
+
+    } catch (error) {
+      console.error("Error during manual API sync trigger:", error);
+      alert(`Gagal memicu sinkronisasi: ${error.message}`);
+    } finally {
+      isApiSyncing.value = false;
+    }
+  }
+
+  async function fetchDashboardData() {
+    isLoading.value = true;
+    console.log('🔍 Fetching dashboard data...');
+    try {
+        const params = new URLSearchParams();
+        
+        // Hanya tambahkan parameter jika bukan "All"
+        if (selectedRegional.value && selectedRegional.value !== 'All Regionals') {
+            params.append('regional', selectedRegional.value);
+        }
+        if (selectedWitel.value && selectedWitel.value !== 'All Witels') {
+            params.append('witel', selectedWitel.value);
+        }
+        if (selectedYear.value && selectedYear.value !== 'All Years') {
+            params.append('year', selectedYear.value);
+        }
+        if (selectedMonthNumber.value && selectedMonthNumber.value !== 'All') {
+            params.append('month', selectedMonthNumber.value);
+        }
+        if (statusFilter.value && statusFilter.value !== 'All') {
+            params.append('status', statusFilter.value);
+        }
+        
+        // Selalu tambahkan page dan limit
+        params.append('page', currentPage.value);
+        params.append('limit', itemsPerPage.value);
+        
+        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+        const url = `${apiBaseUrl}/api/analytics/data?${params.toString()}`;
+        console.log('📡 API URL:', url);
+        
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to fetch dashboard data');
+        
+        const data = await response.json();
+        console.log('📊 Received data:', data);
+        
+        tableData.value = data.tableData || [];
+        filterOptions.value = data.filterOptions || {};
+        
+        console.log('✅ Data loaded:', tableData.value.length, 'records');
+
+    } catch (error) {
+        console.error("❌ Error fetching dashboard data:", error);
+        tableData.value = [];
+    } finally {
+        isLoading.value = false;
     }
   }
 
@@ -141,9 +194,13 @@ export const useDataStore = defineStore('data', () => {
     }
   );
 
-  const regionalList = computed(() => filterOptions.value.regionals);
-  const witelList = computed(() => filterOptions.value.witels);
-  const yearList = computed(() => filterOptions.value.years);
+  // --- GETTERS ---
+  const regionalList = computed(() => filterOptions.value.regionals || ['All Regionals']);
+  const witelList = computed(() => filterOptions.value.witels || ['All Witels']);
+  const lccdList = computed(() => filterOptions.value.lccds || ['All LCCDs']);
+  const streamList = computed(() => filterOptions.value.streams || ['All Streams']);
+  const customerTypeList = computed(() => filterOptions.value.customerTypes || ['All Customer Types']);
+  const yearList = computed(() => filterOptions.value.years || ['All Years']);
   const monthNumberList = computed(() => [
       { value: 'All', label: 'All Months' },
       { value: '01', label: 'January' }, { value: '02', label: 'February' },
@@ -165,7 +222,7 @@ export const useDataStore = defineStore('data', () => {
       return Math.ceil(tableData.value.length / itemsPerPage.value);
   });
 
-  const revenueChartData = computed(() => {
+const revenueChartData = computed(() => {
     const customerRevenueMap = new Map();
     tableData.value.forEach(item => {
         const revenue = parseFloat(item.revenue) || 0;
@@ -220,22 +277,24 @@ export const useDataStore = defineStore('data', () => {
     };
   });
 
-  function setDragging(value) {
-    isDragging.value = value;
-  }
-
+  
   return {
     // State
-    tableData, summaryCards, filterOptions,
+    tableData, homepageSummary, filterOptions,
     selectedRegional, selectedWitel, selectedYear, selectedMonthNumber, statusFilter,
-    isLoading, isUploading, currentPage, itemsPerPage, isDragging,
-    homepageSummary, isHomepageLoading, isSyncing, syncStatus,
+    isLoading, isHomepageLoading, currentPage, itemsPerPage,
+    isUploadingTarget, isApiSyncing, isUploading,
     
     // Getters
-    regionalList, witelList, yearList, monthNumberList,
+    regionalList, witelList, lccdList, streamList, customerTypeList,
+    yearList, monthNumberList,
     paginatedData, totalPages, revenueChartData, pieChartData, revenueLineChartData,
     
     // Actions
-    fetchDashboardData, uploadAnalyticsFile, setDragging, fetchHomepageSummary, startSyncProcess,
+    fetchDashboardData,
+    fetchHomepageSummary,
+    uploadTargetFile,
+    triggerApiSync,
+    uploadAllFiles,
   };
 });

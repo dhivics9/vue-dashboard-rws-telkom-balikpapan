@@ -4,12 +4,14 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import pool from './db.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import documentRoutes from './routes/documentRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import toolRoutes from './routes/toolRoutes.js';
 import syncRoutes from './routes/syncRoutes.js';
+import targetRoutes from './routes/targetRoutes.js';
 
 dotenv.config(); 
 const __filename = fileURLToPath(import.meta.url);
@@ -54,6 +56,8 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/tools', toolRoutes);
 app.use('/api/sync', syncRoutes);
+app.use('/api/targets', targetRoutes);
+app.use('/api/upload', uploadRoutes)
 
 
 app.listen(PORT, () => {

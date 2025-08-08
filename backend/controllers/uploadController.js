@@ -1,52 +1,56 @@
 import pool from '../db.js';
 import XLSX from 'xlsx';
 import fs from 'fs';
-import { internalFetchRevenueData, internalFetchNcxData, internalFetchSalesData } from './toolController.js';
 
-export const startSyncProcess = async (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ message: 'File Target (OGD) diperlukan.' });
+const processExcelFile = (filePath) => {
+    if (!filePath) return [];
+    const workbook = XLSX.readFile(filePath);
+    const sheetName = workbook.SheetNames[0];
+    const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    
+    const normalizeKeys = (obj) => {
+        const newObj = {};
+        for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                const normalizedKey = key.trim().replace(/\s+/g, '_').toLowerCase();
+                newObj[normalizedKey] = obj[key];
+            }
+        }
+        return newObj;
+    };
+
+    return rawData.map(normalizeKeys);
+};
+
+// Fungsi utama untuk memproses semua file
+export const uploadAllFiles = async (req, res) => {
+    if (!req.files || !req.files.revenueFile || !req.files.ncxFile || !req.files.salesFile || !req.files.targetFile) {
+        Object.values(req.files).forEach(fileArray => fs.unlinkSync(fileArray[0].path));
+        return res.status(400).json({ message: 'Semua empat file Excel diperlukan.' });
     }
-    const targetFilePath = req.file.path;
+
+    const files = {
+        revenue: req.files.revenueFile[0].path,
+        ncx: req.files.ncxFile[0].path,
+        sales: req.files.salesFile[0].path,
+        target: req.files.targetFile[0].path,
+    };
+
     const client = await pool.connect();
-    console.log('Memulai proses sinkronisasi data...');
+    console.log('Memulai proses upload multi-file...');
 
     try {
-        // --- PERBAIKAN RACE CONDITION DI SINI ---
-        // Jalankan fetch secara berurutan untuk memastikan token selalu valid
-        console.log('Mengambil data dari API pusat secara berurutan...');
-        const ncxData = await internalFetchNcxData();
-        const salesData = await internalFetchSalesData();
-        const revenueData = await internalFetchRevenueData();
-        
-        if (!Array.isArray(revenueData) || !Array.isArray(ncxData) || !Array.isArray(salesData)) {
-            throw new Error('Salah satu sumber data API tidak mengembalikan array yang valid.');
-        }
-        
-        console.log(`Data diterima: ${revenueData.length} baris revenue, ${ncxData.length} baris NCX, ${salesData.length} baris sales.`);
-
-        const workbook = XLSX.readFile(targetFilePath);
-        const sheetName = workbook.SheetNames[0];
-        const rawTargetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-        
-        const normalizeKeys = (obj) => {
-            const newObj = {};
-            for (const key in obj) {
-                if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                    const normalizedKey = key.replace(/\s+/g, '_').toLowerCase();
-                    newObj[normalizedKey] = obj[key];
-                }
-            }
-            return newObj;
-        };
-        const targetData = rawTargetData.map(normalizeKeys);
-        console.log(`Data target diterima dan dinormalisasi: ${targetData.length} baris.`);
+        console.log('Membaca dan menormalisasi semua file Excel...');
+        const revenueData = processExcelFile(files.revenue);
+        const ncxData = processExcelFile(files.ncx);
+        const salesData = processExcelFile(files.sales);
+        const targetData = processExcelFile(files.target);
+        console.log(`Data diterima: ${revenueData.length} revenue, ${ncxData.length} NCX, ${salesData.length} sales, ${targetData.length} target.`);
 
         console.log('Memasukkan data ke tabel...');
         await client.query('BEGIN');
         await client.query('TRUNCATE TABLE public.revenue_api, public.sales_api, public.ncx_api, public.targets_ogd RESTART IDENTITY');
 
-        // Load data Revenue API
         for (const row of revenueData) {
             await client.query(
                 `INSERT INTO public.revenue_api (periode, cust_order_number, product_label, customer_name, product_name, product_group_name, lccd, regional, witel, rev_type, revenue)
@@ -56,7 +60,6 @@ export const startSyncProcess = async (req, res) => {
         }
         console.log(`✅ ${revenueData.length} baris dimasukkan ke revenue_api.`);
 
-        // Load data Sales API
         for (const row of salesData) {
              await client.query(
                 `INSERT INTO public.sales_api (periode, cust_order_number, product_label, customer_name, product_name, product_group_name, lccd, regional, witel, sales_type, sales_amount)
@@ -66,7 +69,6 @@ export const startSyncProcess = async (req, res) => {
         }
         console.log(`✅ ${salesData.length} baris dimasukkan ke sales_api.`);
 
-        // Load data NCX API
         for (const row of ncxData) {
             await client.query(
                 `INSERT INTO public.ncx_api (li_product_name, ca_account_name, order_id, li_sid, quote_subtype, sa_x_addr_city, sa_x_addr_latitude, sa_x_addr_latitude2, sa_x_addr_longlitude, sa_x_addr_longlitude2, billing_type_cd, price_type_cd, x_mrc_tot_net_pri, x_nrc_tot_net_pri, quote_createdby_name, agree_num, agree_type, agree_end_date, agree_status, li_milestone, order_created_date, sa_witel, sa_account_status, sa_account_address_name, billing_activation_date, billing_activation_status, billcomp_date, li_milestone_date, witel, bw)
@@ -76,7 +78,6 @@ export const startSyncProcess = async (req, res) => {
         }
         console.log(`✅ ${ncxData.length} baris dimasukkan ke ncx_api.`);
 
-        // Load data Target OGD
         for (const row of targetData) {
             await client.query(
                 `INSERT INTO public.targets_ogd (regional, witel, lccd, stream, product_name, gl_account, bp_number, customer_name, customer_type, target, revenue, periode, target_rkapp)
@@ -96,22 +97,10 @@ export const startSyncProcess = async (req, res) => {
         res.status(500).json({ message: 'Proses upload gagal.', error: err.message });
     } finally {
         client.release();
-        // Hapus semua file sementara
         Object.values(files).forEach(filePath => {
             if (fs.existsSync(filePath)) {
                 fs.unlinkSync(filePath);
             }
         });
-    }
-};
-
-export const triggerApiSync = async (req, res) => {
-    console.log('Menerima permintaan untuk memicu sinkronisasi API secara manual...');
-    try {
-        await runApiSync(); // Panggil fungsi inti yang sama dengan scheduler
-        res.status(200).json({ message: 'Sinkronisasi data API berhasil dipicu dan diselesaikan.' });
-    } catch (error) {
-        console.error('Gagal memicu sinkronisasi API secara manual:', error);
-        res.status(500).json({ message: 'Gagal memicu sinkronisasi API.' });
     }
 };

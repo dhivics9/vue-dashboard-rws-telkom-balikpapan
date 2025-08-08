@@ -1,11 +1,12 @@
-<!-- File: src/views/analytics/RegionalReportView.vue -->
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 
+// State untuk menampung data laporan dan filter
 const reportData = ref([]);
 const isLoading = ref(false);
 const error = ref(null);
 
+// Fungsi untuk mendapatkan periode bulan ini dalam format YYYY-MM untuk input
 const getCurrentMonthForInput = () => {
   const now = new Date();
   const year = now.getFullYear();
@@ -15,6 +16,7 @@ const getCurrentMonthForInput = () => {
 
 const selectedMonthInput = ref(getCurrentMonthForInput());
 
+// Fungsi untuk memanggil API backend
 async function fetchReport() {
   isLoading.value = true;
   error.value = null;
@@ -31,6 +33,7 @@ async function fetchReport() {
     }
     const data = await response.json();
     
+    // Hitung baris TOTAL di frontend
     const total = {
       regional: 'TOTAL',
       tgt_mtd: data.reduce((sum, item) => sum + parseFloat(item.tgt_mtd), 0),
@@ -50,13 +53,18 @@ async function fetchReport() {
   }
 }
 
+// Panggil fungsi saat komponen pertama kali dimuat
 onMounted(fetchReport);
 
+// (Opsional) Buat filter reaktif tanpa tombol search
+watch(selectedMonthInput, () => {
+  fetchReport();
+});
 </script>
 
 <template>
   <main>
-    <h1 class="page-title">Revenue Performance</h1>
+    <h1 class="page-title">Revenue Performance - Per Regional (OGD)</h1>
 
     <!-- Filter Section -->
     <div class="card filter-section">
@@ -64,15 +72,14 @@ onMounted(fetchReport);
         <label for="periode-picker">PERIODE</label>
         <input type="month" id="periode-picker" v-model="selectedMonthInput">
       </div>
-      <button class="btn btn-primary" @click="fetchReport" :disabled="isLoading">
-        <span class="material-icons">search</span>
-        Search
-      </button>
+      <!-- Tombol Search bisa dihapus jika Anda menggunakan 'watch' -->
     </div>
 
+    <!-- Loading & Error States -->
     <div v-if="isLoading" class="loading-state card"><p>Memuat laporan...</p></div>
     <div v-else-if="error" class="error-state card"><p>{{ error }}</p></div>
 
+    <!-- Report Table -->
     <div v-else-if="reportData.length > 0" class="card report-table-card">
       <div class="report-header">
         <h3>REPORT REVENUE - PER REGIONAL (PERIODE: {{ selectedMonthInput }})</h3>
@@ -82,6 +89,7 @@ onMounted(fetchReport);
           <button class="btn btn-sm btn-secondary">JPEG</button>
         </div>
       </div>
+      
       <table>
         <thead>
           <tr>
@@ -90,12 +98,10 @@ onMounted(fetchReport);
             <th :colspan="4">YTD {{ selectedMonthInput }}</th>
           </tr>
           <tr>
-            <!-- MTD Headers -->
             <th>TGT</th>
             <th>REAL</th>
             <th>ACH</th>
             <th>RANK</th>
-            <!-- YTD Headers -->
             <th>TGT</th>
             <th>REAL</th>
             <th>ACH</th>
@@ -105,12 +111,10 @@ onMounted(fetchReport);
         <tbody>
           <tr v-for="(row, index) in reportData" :key="index" :class="{ 'total-row': row.regional === 'TOTAL' }">
             <td>{{ row.regional }}</td>
-            <!-- MTD Data -->
             <td>{{ parseFloat(row.tgt_mtd).toLocaleString('id-ID') }}</td>
             <td>{{ parseFloat(row.real_mtd).toLocaleString('id-ID') }}</td>
             <td>{{ parseFloat(row.ach_mtd).toFixed(2) }}%</td>
             <td>{{ row.rank_mtd || '-' }}</td>
-            <!-- YTD Data -->
             <td>{{ parseFloat(row.tgt_ytd).toLocaleString('id-ID') }}</td>
             <td>{{ parseFloat(row.real_ytd).toLocaleString('id-ID') }}</td>
             <td>{{ parseFloat(row.ach_ytd).toFixed(2) }}%</td>
@@ -129,10 +133,12 @@ onMounted(fetchReport);
   align-items: flex-end;
   margin-bottom: 2rem;
   padding: 1rem 1.5rem;
+  max-width: 300px; /* Batasi lebar filter */
 }
 .filter-control {
   display: flex;
   flex-direction: column;
+  flex-grow: 1;
 }
 .filter-control label {
   font-size: 0.8rem;
@@ -146,11 +152,7 @@ onMounted(fetchReport);
   border-radius: var(--border-radius-md);
   font-family: var(--font-family);
 }
-
-.report-table-card {
-  overflow-x: auto;
-}
-
+.report-table-card { overflow-x: auto; }
 .report-header {
   display: flex;
   justify-content: space-between;
@@ -159,69 +161,16 @@ onMounted(fetchReport);
   flex-wrap: wrap;
   gap: 1rem;
 }
-.report-header h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 0.5rem;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  white-space: nowrap;
-}
-
-th, td {
-  border: 1px solid var(--color-border);
-  padding: 0.75rem;
-  text-align: right;
-}
-
-th {
-  background-color: var(--color-secondary);
-  color: white;
-  text-align: center;
-  font-weight: 600;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-thead tr:first-child th {
-  background-color: #2c3e50;
-}
-
-thead tr:last-child th {
-  background-color: #34495e;
-}
-
-td:first-child, th:first-child {
-  text-align: left;
-  font-weight: 500;
-  position: sticky;
-  left: 0;
-  background-color: var(--color-background-card);
-}
-
-thead th:first-child {
-    background-color: #2c3e50;
-}
-
-.total-row {
-  font-weight: 700;
-  background-color: var(--color-background);
-}
-
-.total-row td:first-child {
-    background-color: var(--color-background);
-}
-
-.loading-state, .error-state {
-    text-align: center;
-    padding: 2rem;
-}
+.report-header h3 { font-size: 1.1rem; font-weight: 600; }
+.action-buttons { display: flex; gap: 0.5rem; }
+table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+th, td { border: 1px solid var(--color-border); padding: 0.75rem; text-align: right; }
+th { background-color: var(--color-secondary); color: white; text-align: center; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
+thead tr:first-child th { background-color: #2c3e50; }
+thead tr:last-child th { background-color: #34495e; }
+td:first-child, th:first-child { text-align: left; font-weight: 500; position: sticky; left: 0; background-color: var(--color-background-card); }
+thead th:first-child { background-color: #2c3e50; }
+.total-row { font-weight: 700; background-color: var(--color-background); }
+.total-row td:first-child { background-color: var(--color-background); }
+.loading-state, .error-state { text-align: center; padding: 2rem; }
 </style>

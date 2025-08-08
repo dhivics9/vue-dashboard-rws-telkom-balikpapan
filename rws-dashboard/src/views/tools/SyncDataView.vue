@@ -1,4 +1,3 @@
-<!-- File: src/views/tools/SyncDataView.vue -->
 <script setup>
 import { ref } from 'vue';
 import { useDataStore } from '@/stores/dataStore';
@@ -11,12 +10,12 @@ function handleFileSelect(event) {
   targetFile.value = event.target.files[0];
 }
 
-async function startSync() {
+async function startUpload() {
   if (!targetFile.value) {
     alert('Harap pilih file Excel Target (OGD) terlebih dahulu.');
     return;
   }
-  await store.startSyncProcess(targetFile.value);
+  await store.uploadTargetFile(targetFile.value);
   
   if (fileInputRef.value) {
     fileInputRef.value.value = null;
@@ -27,18 +26,30 @@ async function startSync() {
 
 <template>
   <main>
-    <h1 class="page-title">Sinkronisasi Data</h1>
+    <h1 class="page-title">Manajemen Data</h1>
     <p class="page-description">
-      Gunakan halaman ini untuk memperbarui seluruh data di dashboard dengan mengambil data terbaru dari API pusat dan menggabungkannya dengan data target dari file OGD.
+      Gunakan halaman ini untuk mengelola dan memperbarui data di dalam dashboard.
     </p>
 
+    <!-- BAGIAN BARU: PEMICU SINKRONISASI API -->
     <div class="card sync-card">
-      <h3>Langkah-langkah Sinkronisasi</h3>
-      <ol class="steps">
-        <li>Backend akan mengambil data Revenue, NCX, dan Sales terbaru dari API pusat.</li>
-        <li>Pilih file Excel **Revenue Summary (OGD)** yang berisi data target.</li>
-        <li>Klik tombol "Mulai Sinkronisasi" untuk memulai proses penggabungan dan penyimpanan data.</li>
-      </ol>
+      <h3>Sinkronisasi Data API (Live)</h3>
+      <p>
+        Proses ini akan mengambil data Revenue, NCX, dan Sales terbaru dari API pusat. Proses ini berjalan otomatis setiap malam, tetapi Anda bisa memicunya secara manual di sini jika diperlukan.
+      </p>
+      <button class="btn btn-secondary" @click="store.triggerApiSync" :disabled="store.isApiSyncing || store.isUploadingTarget">
+        <span v-if="store.isApiSyncing" class="material-icons spinning">autorenew</span>
+        <span v-else class="material-icons">cloud_sync</span>
+        {{ store.isApiSyncing ? 'Sedang Sinkronisasi API...' : 'Jalankan Sinkronisasi API Sekarang' }}
+      </button>
+    </div>
+
+    <!-- BAGIAN LAMA: UPLOAD FILE TARGET -->
+    <div class="card sync-card">
+      <h3>Upload Data Target (Manual)</h3>
+      <p>
+        Pilih file Excel **Revenue Summary (OGD)** yang berisi data target untuk memperbarui laporan performa di seluruh dashboard.
+      </p>
 
       <div class="upload-section">
         <label for="target-file-upload" class="btn btn-secondary">
@@ -56,35 +67,23 @@ async function startSync() {
         <span v-if="targetFile" class="file-name">{{ targetFile.name }}</span>
       </div>
 
-      <button class="btn btn-primary" @click="startSync" :disabled="store.isSyncing">
-        <span v-if="store.isSyncing" class="material-icons spinning">autorenew</span>
-        <span v-else class="material-icons">sync</span>
-        {{ store.isSyncing ? 'Sedang Sinkronisasi...' : 'Mulai Sinkronisasi' }}
+      <button class="btn btn-primary" @click="startUpload" :disabled="store.isUploadingTarget || store.isApiSyncing">
+        <span v-if="store.isUploadingTarget" class="material-icons spinning">autorenew</span>
+        <span v-else class="material-icons">publish</span>
+        {{ store.isUploadingTarget ? 'Sedang Mengupload...' : 'Upload File Target' }}
       </button>
-
-      <div v-if="store.syncStatus" class="status-log">
-        <h4>Log Sinkronisasi:</h4>
-        <pre>{{ store.syncStatus }}</pre>
-      </div>
     </div>
   </main>
 </template>
 
 <style scoped>
-.page-description {
-  margin-top: -1rem;
-  margin-bottom: 2rem;
-  color: var(--color-text-secondary);
-}
+/* Tambahkan style ini untuk memisahkan kartu */
 .sync-card {
   max-width: 800px;
+  margin-bottom: 2rem; /* Beri jarak antar kartu */
 }
-.steps {
-  margin-bottom: 2rem;
-  padding-left: 1.5rem;
-}
-.steps li {
-  margin-bottom: 0.5rem;
+.sync-card p {
+    margin-bottom: 1.5rem;
 }
 .upload-section {
   display: flex;
@@ -95,21 +94,6 @@ async function startSync() {
 .file-name {
   color: var(--color-text-secondary);
   font-style: italic;
-}
-.status-log {
-  margin-top: 2rem;
-  border-top: 1px solid var(--color-border);
-  padding-top: 1.5rem;
-}
-.status-log pre {
-  background-color: #2c3e50;
-  color: #ecf0f1;
-  padding: 1rem;
-  border-radius: var(--border-radius-md);
-  white-space: pre-wrap;
-  word-break: break-all;
-  max-height: 300px;
-  overflow-y: auto;
 }
 .spinning {
   animation: spin 1s linear infinite;

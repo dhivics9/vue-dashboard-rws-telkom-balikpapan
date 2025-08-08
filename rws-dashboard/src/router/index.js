@@ -21,8 +21,13 @@ const router = createRouter({
         {
           path: 'regional-report',
           name: 'analytics-regional-report',
-          component: () => import('../views/analytics/RevenuePerformanceView.vue')
-        }
+          component: () => import('../views/analytics/RegionalReportView.vue')
+        },
+        {
+          path: '/analytics/product-summary',
+          name: 'analytics-product-summary',
+          component: () => import('../views/analytics/ProductSummaryView.vue')
+        },
       ]
     },
     {
@@ -62,6 +67,11 @@ const router = createRouter({
       name: 'sync-data',
       component: () => import('../views/tools/SyncDataView.vue')
     },
+    {
+      path: '/tools/update-data',
+      name: 'update-data',
+      component: () => import('../views/tools/updateDataView.vue')
+    }
   ]
 })
 
